@@ -11,7 +11,7 @@ Game::Game() :
     window_.setFramerateLimit(120);
     renderer_.handleResize(window_);
     renderer_.setCameraCenter(160, 90);
-    renderer_.zoomCamera(0.9);
+    renderer_.zoomCamera(0.9); // 优化震动观感
     // std::cout << renderer_.isPointVisible({0,0});
 }
 

@@ -6,7 +6,7 @@
 #define CELESTE_GAME_H
 
 #include <SFML/Graphics.hpp>
-#include "../Render/Render.h"
+#include "../Render/ViewRender.h"
 #include "../Render/Line.h"
 #include <iostream>
 

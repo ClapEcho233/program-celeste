@@ -7,7 +7,9 @@
 
 #include <SFML/Graphics.hpp>
 
-class Line {
+#include "Renderable.h"
+
+class Line: public Renderable {
 private:
     std::vector<sf::VertexArray> gridLines_;
     float gridCountX_;
@@ -22,7 +24,7 @@ public:
 
     void work ();
 
-    void render(sf::RenderWindow &window);
+    void render(sf::RenderWindow &window) override;
 };
 
 #endif //CELESTE_LINE_H

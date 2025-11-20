@@ -6,14 +6,15 @@ set(CMAKE_CXX_STANDARD 20)
 add_executable(celeste src/main.cpp
         src/Core/game.cpp
         src/Level/level.cpp
-        src/Render/Render.cpp
-        src/Render/Render.h
+        src/Render/ViewRender.cpp
+        src/Render/ViewRender.h
         src/Player/Player.cpp
         src/Player/Player.h
         src/Physics/PhysicsEngine.cpp
         src/Physics/PhysicsEngine.h
         src/Render/Line.cpp
-        src/Render/Line.h)
+        src/Render/Line.h
+        src/Render/Renderable.h)
 
 #添加下面SFML配置
 #set(SFML_STATIC_LIBRARIES TRUE)
