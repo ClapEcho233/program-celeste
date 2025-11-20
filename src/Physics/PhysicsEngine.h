@@ -1,8 +1,0 @@
-//
-// Created by ClapEcho233 on 2025/11/18.
-//
-
-#ifndef CELESTE_PHYSICSENGINE_H
-#define CELESTE_PHYSICSENGINE_H
-
-#endif //CELESTE_PHYSICSENGINE_H
