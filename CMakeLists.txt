@@ -10,11 +10,12 @@ add_executable(celeste src/main.cpp
         src/Render/ViewRender.h
         src/Player/Player.cpp
         src/Player/Player.h
-        src/Physics/PhysicsEngine.cpp
-        src/Physics/PhysicsEngine.h
         src/Render/Line.cpp
         src/Render/Line.h
-        src/Render/Renderable.h)
+        src/Render/Renderable.h
+        src/Input/Input.cpp
+        src/Input/Input.h
+        src/Common/Constant.h)
 
 #添加下面SFML配置
 #set(SFML_STATIC_LIBRARIES TRUE)

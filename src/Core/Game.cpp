@@ -7,7 +7,8 @@
 Game::Game() :
     window_(sf::VideoMode({1920, 1080}), "Celeste"),
     renderer_(320, 180, sf::Color(0, 0, 0)),
-    line_(64, 36) {
+    line_(64, 36),
+    deltaTime_(0){
     window_.setFramerateLimit(120);
     renderer_.handleResize(window_);
     renderer_.setCameraCenter(160, 90);
@@ -19,12 +20,16 @@ bool Game::isRunning() const {
     return window_.isOpen();
 }
 
+void Game::initialize() {
+    deltaTime_ = clock_.restart().asSeconds();
+}
+
 void Game::processEvent() {
     window_.handleEvents([this](const auto &event) { this->handleEvent(event); });
 }
 
 void Game::update() {
-
+    std::cout << deltaTime_ << std::endl;
 }
 
 void Game::render() {
@@ -44,6 +49,11 @@ void Game::render() {
 
     window_.display();
 }
+
+float Game::getDeltaTime() const {
+    return deltaTime_;
+}
+
 
 void Game::handleEvent(const sf::Event::Closed &) {
     window_.close();

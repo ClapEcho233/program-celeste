@@ -15,6 +15,8 @@ private:
     sf::RenderWindow window_;
     ViewportAspectRenderer renderer_;
     Line line_;
+    sf::Clock clock_;
+    float deltaTime_;
 
 public:
     Game();
@@ -25,20 +27,18 @@ public:
     bool isRunning() const;
 
     /**
-     * 事件处理
+     * 初始化游戏引擎
+     * 更新 deltaTime
      */
+    void initialize();
+
     void processEvent();
 
-    /**
-     * 游戏状态更新
-     */
     void update();
 
-    /**
-     * 渲染
-     */
     void render();
 
+    float getDeltaTime() const;
 
 private:
     /**
