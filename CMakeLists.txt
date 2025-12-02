@@ -12,7 +12,7 @@ add_executable(celeste src/main.cpp
         src/Player/Player.h
         src/Render/Line.cpp
         src/Render/Line.h
-        src/Render/Renderable.h
+        src/Common/Renderable.h
         src/Input/Input.cpp
         src/Input/Input.h
         src/Common/Constant.h)

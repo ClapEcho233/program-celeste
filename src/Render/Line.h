@@ -7,7 +7,7 @@
 
 #include <SFML/Graphics.hpp>
 
-#include "Renderable.h"
+#include "../Common/Renderable.h"
 
 class Line: public Renderable {
 private:

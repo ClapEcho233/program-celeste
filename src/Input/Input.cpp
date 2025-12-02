@@ -84,3 +84,20 @@ void VirtualLR::update() {
     }
 }
 
+Input::Input() :
+    up(Button::Up),
+    down(Button::Down),
+    jump(Button::Jump),
+    dash(Button::Dash),
+    climb(Button::Climb) {
+}
+
+void Input::update() {
+    up.update();
+    down.update();
+    jump.update();
+    dash.update();
+    climb.update();
+    lr.update();
+}
+

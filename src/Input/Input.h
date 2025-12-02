@@ -73,10 +73,14 @@ private:
 public:
     VirtualButton up;
     VirtualButton down;
-    VirtualLR LR;
+    VirtualLR lr;
     VirtualButton jump;
     VirtualButton dash;
     VirtualButton climb;
+
+    Input();
+
+    void update();
 };
 
 #endif //CELESTE_INPUTMANAGER_H
