@@ -15,7 +15,8 @@ add_executable(celeste src/main.cpp
         src/Common/Renderable.h
         src/Input/Input.cpp
         src/Input/Input.h
-        src/Common/Constant.h)
+        src/Common/Constant.h
+        src/Common/json.hpp)
 
 #添加下面SFML配置
 #set(SFML_STATIC_LIBRARIES TRUE)
@@ -24,8 +25,13 @@ find_package(SFML COMPONENTS System Window Graphics Audio Network REQUIRED)
 include_directories(C:/Users/ClapEcho233/Documents/program of game/SFML-3.0.2/include)
 target_link_libraries(celeste SFML::System SFML::Window SFML::Graphics SFML::Audio SFML::Network)
 
-#复制资源到生成的exe文件夹
-file(COPY assets DESTINATION ${CMAKE_BINARY_DIR})
+# 复制assets文件夹及其所有内容
+add_custom_command(TARGET celeste POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+        ${CMAKE_SOURCE_DIR}/assets
+        $<TARGET_FILE_DIR:celeste>/assets
+        COMMENT "Copying assets to output directory"
+)
 
 # 复制 SFML/bin 下的所有 DLL 文件到输出目录
 file(COPY "C:/Users/ClapEcho233/Documents/program of game/SFML-3.0.2/bin/"

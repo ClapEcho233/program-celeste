@@ -9,7 +9,7 @@
 
 #include "../Common/Renderable.h"
 
-class Line: public Renderable {
+class Line: public IRenderable {
 private:
     std::vector<sf::VertexArray> gridLines_;
     float gridCountX_;

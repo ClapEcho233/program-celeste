@@ -8,6 +8,7 @@
 #include <SFML/Graphics.hpp>
 #include "../Render/ViewRender.h"
 #include "../Render/Line.h"
+#include "../Level/Level.h"
 #include <iostream>
 
 class Game {
@@ -16,6 +17,7 @@ private:
     ViewportAspectRenderer renderer_;
     Line line_;
     sf::Clock clock_;
+    LevelManager levelManager_;
     float deltaTime_;
 
 public:

@@ -7,10 +7,10 @@
 
 #include <SFML/Graphics.hpp>
 
-class Renderable {
+class IRenderable {
 public:
     virtual void render(sf::RenderWindow& window) = 0;
-    virtual ~Renderable() = default;
+    virtual ~IRenderable() = default;
 };
 
 #endif //CELESTE_RENDERABLE_H
