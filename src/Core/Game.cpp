@@ -6,14 +6,16 @@
 
 Game::Game() :
     window_(sf::VideoMode({1920, 1080}), "Celeste"),
-    renderer_(320, 180, sf::Color(0, 0, 0)),
+    renderer_(3200, 1800, sf::Color(0, 0, 0)),
     line_(64, 36),
     deltaTime_(0){
     window_.setFramerateLimit(120);
     renderer_.handleResize(window_);
-    renderer_.setCameraCenter(160, 90);
+    renderer_.setCameraCenter(1600, 900);
     renderer_.zoomCamera(0.9); // 优化震动观感
     // std::cout << renderer_.isPointVisible({0,0});
+
+    player_ = new Player(levelManager_.getLevel());
 }
 
 bool Game::isRunning() const {
@@ -29,23 +31,20 @@ void Game::processEvent() {
 }
 
 void Game::update() {
-    std::cout << deltaTime_ << std::endl;
+    player_ -> update();
 }
 
 void Game::render() {
-
-    sf::CircleShape player(10);
-    player.setFillColor(sf::Color::Red);
-    player.setPosition({150, 80});
-
-
     // 渲染
     window_.clear(renderer_.getBorderColor());
     // 应用游戏视图并渲染游戏世界
     renderer_.applyView(window_);
 
-    window_.draw(player);
     line_.render(window_);
+
+    // 渲染对象
+    player_ -> render(window_);
+    levelManager_.render(window_);
 
     window_.display();
 }

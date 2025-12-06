@@ -9,6 +9,7 @@
 #include "../Render/ViewRender.h"
 #include "../Render/Line.h"
 #include "../Level/Level.h"
+#include "../Player/Player.h"
 #include <iostream>
 
 class Game {
@@ -18,6 +19,7 @@ private:
     Line line_;
     sf::Clock clock_;
     LevelManager levelManager_;
+    Player* player_;
     float deltaTime_;
 
 public:

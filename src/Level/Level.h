@@ -30,7 +30,11 @@ using json = nlohmann::json;
     ],
     "Hurt":[
         ...
-    ]
+    ],
+    "position": {
+        "x": 10,
+        "y": 10
+    }
 }
  */
 
@@ -46,7 +50,7 @@ public:
 
     sf::RectangleShape getEntity();
 
-    EType getType();
+    EType getType() const;
 
     bool getSafe();
 
@@ -58,6 +62,7 @@ private:
     std::vector<Entity> platform_;
     std::vector<Entity> hurt_;
     std::vector<Entity> jumpThru_;
+    sf::Vector2f position_;
 
 public:
     /**
@@ -72,6 +77,8 @@ public:
      * @return 碰撞到的实体，unsafe 在前
      */
     std::vector<Entity> collision(sf::FloatRect player);
+
+    sf::Vector2f getPosition() const;
 
     void render(sf::RenderWindow &window) override;
 };

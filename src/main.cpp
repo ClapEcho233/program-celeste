@@ -1,9 +1,9 @@
 #include "Core/Game.h"
 #include "Common/Constant.h"
 
+// 帧间隔时间
 float deltaTime = 0;
 
- // 帧间隔时间
 int main() {
     freopen("nul", "w", stderr);
 

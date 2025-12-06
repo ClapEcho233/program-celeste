@@ -44,13 +44,13 @@ void VirtualButton::update() {
     }
 }
 
-void VirtualButton::ConsumeBuffer() {
+void VirtualButton::consumeBuffer() {
     // 将当前 buffered 状态标记为已消费
     bufferCounter_ = 0;
     buffered = false;
 }
 
-void VirtualButton::ConsumePress() {
+void VirtualButton::consumePress() {
     // 将当前 pressed 状态标记为已消费
     pressed = false;
 }

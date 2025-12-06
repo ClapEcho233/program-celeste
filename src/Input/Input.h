@@ -45,12 +45,12 @@ public:
     /**
      * 消费 Buffer 状态
      */
-    void ConsumeBuffer();
+    void consumeBuffer();
 
     /**
      * 消费 Press 状态
      */
-    void ConsumePress();
+    void consumePress();
 };
 
 class VirtualLR {

@@ -21,17 +21,17 @@ void Line::setGridCount(const float &gridCountX, const float &gridCountY) {
 
 void Line::work() {
     gridLines_.clear ();
-    float inv = 320 / gridCountX_;
+    float inv = 3200 / gridCountX_;
     for (int i = 0; i <= gridCountX_; i++) {
         sf::VertexArray line(sf::PrimitiveType::Lines, 2);
         line[0] = sf::Vertex(sf::Vector2f(i * inv, 0.0f), sf::Color(80, 80, 80, 100));
-        line[1] = sf::Vertex(sf::Vector2f(i * inv, 180.0f), sf::Color(80, 80, 80, 100));
+        line[1] = sf::Vertex(sf::Vector2f(i * inv, 1800.0f), sf::Color(80, 80, 80, 100));
         gridLines_.push_back(line);
     }
     for (int i = 0; i <= gridCountY_; i++) {
         sf::VertexArray line(sf::PrimitiveType::Lines, 2);
         line[0] = sf::Vertex(sf::Vector2f(0.0f, i * inv), sf::Color(80, 80, 80, 100));
-        line[1] = sf::Vertex(sf::Vector2f(320.0f, i * inv), sf::Color(80, 80, 80, 100));
+        line[1] = sf::Vertex(sf::Vector2f(3200.0f, i * inv), sf::Color(80, 80, 80, 100));
         gridLines_.push_back(line);
     }
 }

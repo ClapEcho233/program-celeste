@@ -9,9 +9,6 @@ Entity::Entity(EType type, sf::Vector2f size, sf::Vector2f position, bool safe)
     // 设置实体的大小
     entity_.setSize(size);
 
-    // 设置原点为中心
-    entity_.setOrigin({entity_.getSize().x / 2, entity_.getSize().y / 2});
-
     // 根据类型设置不同颜色
     switch(type_) {
         case EType::Platform:
@@ -33,7 +30,7 @@ sf::RectangleShape Entity::getEntity() {
     return entity_;
 }
 
-EType Entity::getType() {
+EType Entity::getType() const{
     return type_;
 }
 
@@ -61,6 +58,8 @@ Level::Level(json configs) {
     work("Platform", EType::Platform);
     work("JumpThru", EType::JumpThru);
     work("Hurt", EType::Hurt);
+
+    position_ = sf::Vector2f{configs.at("position").at("x"), configs.at("position").at("y")};
 }
 
 std::vector<Entity> Level::collision(sf::FloatRect player) {
@@ -80,6 +79,10 @@ std::vector<Entity> Level::collision(sf::FloatRect player) {
     work(platform_);
 
     return ret;
+}
+
+sf::Vector2f Level::getPosition() const {
+    return position_;
 }
 
 void Level::render(sf::RenderWindow &window) {

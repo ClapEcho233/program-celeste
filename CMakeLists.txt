@@ -16,7 +16,9 @@ add_executable(celeste src/main.cpp
         src/Input/Input.cpp
         src/Input/Input.h
         src/Common/Constant.h
-        src/Common/json.hpp)
+        src/Common/json.hpp
+        src/Player/StateMachine.cpp
+        src/Player/StateMachine.h)
 
 #添加下面SFML配置
 #set(SFML_STATIC_LIBRARIES TRUE)
