@@ -14,6 +14,11 @@
 
 class Game {
 private:
+    static constexpr float ShakeDeltaTime = 0.01; // 震动时间间隔
+    static constexpr float ShakeNumber = 4;       // 震动次数
+    static constexpr float ShakePixel = 10;       // 震动幅度（像素）
+
+private:
     sf::RenderWindow window_;
     ViewportAspectRenderer renderer_;
     Line line_;
@@ -21,6 +26,11 @@ private:
     LevelManager levelManager_;
     Player* player_;
     float deltaTime_;
+
+    sf::Vector2f shakeDir_; // 震动方向
+    float shakeSign_;       // 标志
+    float shakeNumber_;     // 剩余震动次数
+    float shakeDeltaTimer_; // 震动间隔计时器
 
 public:
     Game();
@@ -35,14 +45,13 @@ public:
      * 更新 deltaTime
      */
     void initialize();
-
     void processEvent();
-
     void update();
-
     void render();
-
     float getDeltaTime() const;
+
+    void screenShake(sf::Vector2f dir); // 屏幕震动
+    void shakeUpdate();
 
 private:
     /**
@@ -55,7 +64,6 @@ private:
      * @param resized 改变后窗口对象
      */
     void handleEvent(const sf::Event::Resized &resized);
-
     void handleEvent(const auto &) {}
 };
 

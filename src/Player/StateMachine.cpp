@@ -14,6 +14,7 @@ StateMachine::StateMachine():
     for (int i = 0; i < static_cast<int>(PlayerState::Count); ++i) {
         updateCallbacks[i] = nullptr;
         coroutineCallbacks[i] = nullptr;
+        coroutineCallbacksBackup[i] = nullptr;
         beginCallbacks[i] = nullptr;
         endCallbacks[i] = nullptr;
     }
@@ -27,6 +28,7 @@ void StateMachine::setCallbacks(PlayerState state,
     int index = static_cast<int>(state);
     updateCallbacks[index] = update;
     coroutineCallbacks[index] = coroutine;
+    coroutineCallbacksBackup[index] = coroutine;
     beginCallbacks[index] = begin;
     endCallbacks[index] = end;
 }
@@ -63,10 +65,13 @@ void StateMachine::changeState(PlayerState newState) {
 
 void StateMachine::startCoroutine() {
     int index = static_cast<int>(currentState_);
+    coroutineCallbacks[index] = coroutineCallbacksBackup[index]; // 恢复函数指针
     if (coroutineCallbacks[index]) {
         isInCoroutine_ = true;
         coroutineTimer_ = 0.0;
         coroutineWaitTime_ = 0.0;
+        co_ = copp::coroutine_context_default::create(std::move(coroutineCallbacks[index]));
+        co_ -> start();
     }
 }
 
@@ -74,7 +79,7 @@ void StateMachine::updateCoroutine() {
     // if (!isInCoroutine_) return;
 
     int index = static_cast<int>(currentState_);
-    if (!coroutineCallbacks[index]) {
+    if (!coroutineCallbacksBackup[index]) {
         isInCoroutine_ = false;
         return;
     }
@@ -86,26 +91,31 @@ void StateMachine::updateCoroutine() {
     }
 
     // 执行协程的一步
-    CoroutineResult result = coroutineCallbacks[index]();
+    co_ -> resume();
 
-    if (result.isDone) {
-        // 协程完成
-        isInCoroutine_ = false;
-    } else {
-        // 设置下一次等待时间
-        coroutineWaitTime_ = result.waitTime;
-        coroutineTimer_ = 0.0f;
-    }
+    // 设置下一次等待时间
+    coroutineWaitTime_ = messages_.waitTime;
+    // std::cout << messages_.waitTime << std::endl;
+    coroutineTimer_ = 0.0f;
+}
+
+void StateMachine::stopCoroutine() {
+    co_.reset();
+    isInCoroutine_ = false;
 }
 
 void StateMachine::update() {
     // 如果正在执行协程，先更新协程
     if (isInCoroutine_) {
         updateCoroutine();
-        return;
     }
 
-    // 否则执行正常的状态更新
+    if (messages_.isDone) {
+        // 协程完成
+        stopCoroutine();
+    }
+
+    // 执行正常的状态更新
     int index = static_cast<int>(currentState_);
     if (updateCallbacks[index]) {
         PlayerState nextState = updateCallbacks[index]();

@@ -32,7 +32,7 @@ private:
 
 public:
     Button button;
-    float bufferTime = 0.0f; // 缓冲时间
+    float bufferTime = 0.1; // 缓冲时间
     bool buffered; // 是否在缓冲状态
     bool check; // 当前状态
     bool pressed; // 是否按下
@@ -41,6 +41,8 @@ public:
     VirtualButton(Button b);
 
     void update ();
+
+    bool getOriginalInput();
 
     /**
      * 消费 Buffer 状态

@@ -9,13 +9,15 @@ Entity::Entity(EType type, sf::Vector2f size, sf::Vector2f position, bool safe)
     // 设置实体的大小
     entity_.setSize(size);
 
+    entity_.setOrigin({entity_.getSize().x / 2, entity_.getSize().y / 2});
+
     // 根据类型设置不同颜色
     switch(type_) {
         case EType::Platform:
-            entity_.setFillColor(sf::Color::Magenta);
+            entity_.setFillColor(sf::Color::Cyan);
             break;
         case EType::JumpThru:
-            entity_.setFillColor(sf::Color::Blue);
+            entity_.setFillColor(sf::Color::Magenta);
             break;
         case EType::Hurt:
             entity_.setFillColor(sf::Color::Red);
