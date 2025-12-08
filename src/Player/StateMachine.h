@@ -7,7 +7,9 @@
 
 #include "../Common/Constant.h"
 #include <functional>
+#include <memory>
 #include <iostream>
+#include <libcopp/coroutine/coroutine_context_container.h>
 
 enum class PlayerState {
     Normal = 0,
@@ -16,16 +18,12 @@ enum class PlayerState {
     Count // 状态总数
 };
 
-// 协程返回类型
-struct CoroutineResult {
-    bool isDone;
-    float waitTime;  // 需要等待的时间
-};
+inline CoroutineMessage messages_;
 
 // 状态回调函数类型
 using StateBeginFunc = std::function<void()>;
 using StateUpdateFunc = std::function<PlayerState()>;
-using StateCoroutineFunc = std::function<CoroutineResult()>;
+using StateCoroutineFunc = std::function<int(void*)>;
 using StateEndFunc = std::function<void()>;
 
 class StateMachine {
@@ -36,10 +34,12 @@ private:
     // 回调函数存储
     StateUpdateFunc updateCallbacks[static_cast<int>(PlayerState::Count)];
     StateCoroutineFunc coroutineCallbacks[static_cast<int>(PlayerState::Count)];
+    StateCoroutineFunc coroutineCallbacksBackup[static_cast<int>(PlayerState::Count)]; // 备份被 move 走的函数指针
     StateBeginFunc beginCallbacks[static_cast<int>(PlayerState::Count)];
     StateEndFunc endCallbacks[static_cast<int>(PlayerState::Count)];
 
     // 协程相关
+    copp::coroutine_context_default::ptr_type co_;
     bool isInCoroutine_;
     float coroutineTimer_;
     float coroutineWaitTime_;

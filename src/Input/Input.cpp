@@ -44,6 +44,10 @@ void VirtualButton::update() {
     }
 }
 
+bool VirtualButton::getOriginalInput() {
+    return sf::Keyboard::isKeyPressed(KeyMap.at(button));
+}
+
 void VirtualButton::consumeBuffer() {
     // 将当前 buffered 状态标记为已消费
     bufferCounter_ = 0;

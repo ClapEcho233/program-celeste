@@ -27,7 +27,7 @@ public:
      * @param borderColor 黑边颜色
      */
     ViewportAspectRenderer(float width = 1920.0f, float height = 1104.0f,
-                          const sf::Color& borderColor = sf::Color::Black);
+                          const sf::Color& borderColor = sf::Color::White);
 
     /**
      * @brief 处理窗口大小变化事件，更新视口设置

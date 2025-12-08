@@ -12,7 +12,7 @@ Game::Game() :
     window_.setFramerateLimit(120);
     renderer_.handleResize(window_);
     renderer_.setCameraCenter(1600, 900);
-    renderer_.zoomCamera(0.9); // 优化震动观感
+    renderer_.zoomCamera(0.96); // 优化震动观感
     // std::cout << renderer_.isPointVisible({0,0});
 
     player_ = new Player(levelManager_.getLevel());

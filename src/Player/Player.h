@@ -8,9 +8,12 @@
 #include "../Common/Renderable.h"
 #include "../Level/Level.h"
 #include "../Input/Input.h"
+#include "../Render/TrailEffect.h"
 #include "StateMachine.h"
 #include <iostream>
 #include <cmath>
+#include <SFML/System.hpp>
+#include <SFML/Graphics.hpp>
 
 enum class State {Normal, Climb, Dash};
 
@@ -25,14 +28,31 @@ private:
     static constexpr float MaxRun = 900;                 // 最大跑步速度
     static constexpr float RunAccel = 10000;             // 跑步加速度
     static constexpr float RunReduce = 4000;             // 超速时减速力
-    static constexpr float AirMult = 0.65;              // 空中移动系数
+    static constexpr float AirMult = 0.65;               // 空中移动系数
     static constexpr float WalkSpeed = 640;              // 行走速度
 
     static constexpr float JumpSpeed = -1050;            // 跳跃初始速度 (向上为负)
     static constexpr float JumpHBoost = 400;             // 跳跃水平助推
-    static constexpr float VarJumpTime = 0.2;           // 可变跳跃时间窗口
-    static constexpr float CeilingVarJumpGrace = 0.05;  // 天花板碰撞跳跃宽限
-    static constexpr float JumpGraceTime = 0.1;         // 地面跳跃宽限时间
+    static constexpr float VarJumpTime = 0.2;            // 可变跳跃时间窗口
+    static constexpr float CeilingVarJumpGrace = 0.05;   // 天花板碰撞跳跃宽限
+    static constexpr float JumpGraceTime = 0.1;          // 地面跳跃宽限时间
+
+    static constexpr float CornerCorrection = 40;  // 墙角修正宽限像素
+
+    static constexpr float WallSlideStartMax = 200;      // 墙面滑动起始最大下落速度
+    static constexpr float WallSlideTime = 1.2;          // 墙面滑动总时间
+
+    static constexpr float MaxDashes = 1;                // 最大冲刺次数
+    static constexpr float DashSpeed = 2400;             // 冲刺速度
+    static constexpr float EndDashSpeed = 1600;          // 冲刺结束速度
+    static constexpr float EndDashUpMult = 0.75;         // 冲刺结束上升动量
+    static constexpr float TrailCreationTime = 0.03;     // 残影创建时间间隔 (初始)
+    static constexpr float TrailNumber = 6;              // 残影数量
+
+    //------------------------------------------------------------------------------------------------------------------
+
+    const sf::Color Normal = sf::Color(172, 50, 50);
+    const sf::Color Used = sf::Color(68, 183, 255);
 
     //------------------------------------------------------------------------------------------------------------------
 
@@ -50,6 +70,7 @@ private:
     Level nowlevel_; // 当前关卡
     Input input_; // 键盘交互
     StateMachine stateMachine_;
+    TrailEffectManager trailEffectManager_; // 残影控制器
 
     // 物理属性
     sf::Vector2f speed;
@@ -60,10 +81,18 @@ private:
     bool wasOnGround;
     int dashes; // 当前冲刺次数
     float varJumpSpeed; // 可变跳跃基准速度
+    float maxFall; // 最大下落速度
+    int wallSlideDir; // 墙壁滑行面向方向
+    sf::Vector2f lastAim; // 最后瞄准方向
+    sf::Vector2f beforeDashSpeed;
+
+    int trailNumber; // 剩余残影数量
 
     // 计时器
     float jumpGraceTimer; // 跳跃宽限计时器 (0.1s)
     float varJumpTimer; // 可变跳跃计时器 (0.2s)
+    float wallSlideTimer; // 墙壁滑行计时器 (1.2s)
+    float trailCreationTimer; // 残影创建计时器 (0.2s)
 
 public:
 
@@ -92,10 +121,12 @@ private:
     PlayerState dashBegin();
     PlayerState dashUpdate();
     void dashEnd();
-    CoroutineResult dashCoroutine();
+    int dashCoroutine(void *priv);
 
-    // 水平移动控制
-    void moveHControl();
+    void moveHControl(); // 水平移动控制
+    void jumpControl(); // 跳跃控制
+    void wallSlideCheck(); // 墙壁滑行检测
+    void trailControl(); // 残影控制
 
     // 地面检测（此时是否位于地面）
     void groundCheck();
@@ -117,10 +148,13 @@ private:
     void onCollideV(const CollisionData& data); // 竖直碰撞回调
 
     // 不同碰撞方向处理
-    void HandleLeftWallCollision(const CollisionData& data); // 碰到左侧墙面
-    void HandleRightWallCollision(const CollisionData& data); // 碰到右侧墙面
-    void HandleGroundCollision(const CollisionData& data); // 碰到天花板
-    void HandleCeilingCollision(const CollisionData& data); // 碰到地板
+    void handleLeftWallCollision(const CollisionData& data); // 碰到左侧墙面
+    void handleRightWallCollision(const CollisionData& data); // 碰到右侧墙面
+    void handleGroundCollision(const CollisionData& data); // 碰到天花板
+    void handleCeilingCollision(const CollisionData& data); // 碰到地板
+
+    // 墙角修正
+    bool upwardCornerCorrection(); // 向上墙角修正
 
     // 应用重力
     void applyGravity();
