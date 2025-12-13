@@ -5,15 +5,7 @@
 #include "Player.h"
 
 Player::Player(Level nowLevel, std::function<void(sf::Vector2f)> shake) :
-    nowlevel_(nowLevel),
-    moveX(0),
-    onGround(false),
-    wasOnGround(false),
-    dashes(1),
-    trailNumber(0),
-    jumpGraceTimer(0),
-    varJumpTimer(0),
-    trailCreationTimer(0){
+    nowlevel_(nowLevel){
     // 初始化状态回调函数
     setupStateCallbacks();
 
@@ -25,6 +17,16 @@ Player::Player(Level nowLevel, std::function<void(sf::Vector2f)> shake) :
     player_.setOrigin({40, 55});
     player_.setPosition(nowLevel.getPosition());
 
+    jumpGraceTimer = 0;
+    varJumpTimer = 0;
+    wallSlideTimer = 0;
+    trailCreationTimer = 0;
+    forceMoveXTimer = 0;
+    climbNoMoveTimer = 0;
+    wallBoostTimer = 0;
+    climbJumpProtectionTimer = 0;
+    dashRefillCooldownTimer = 0;
+
     // 设置回调
     shakeCallback = shake;
 }
@@ -35,6 +37,13 @@ void Player::update() {
     // 更新输入
     input_.update();
     moveX = input_.lr.value;
+    if (forceMoveXTimer > 0) {
+        forceMoveXTimer -= deltaTime;
+        moveX = forceMoveX;
+    }
+
+    // 更新计时器
+    updateDashAttackTimer();
 
     // 更新历史状态
     wasOnGround = onGround;
@@ -53,7 +62,7 @@ void Player::update() {
     moveH(speed.x * deltaTime);
     moveV(speed.y * deltaTime);
     // std::cout << speed.x << "," << speed.y << std::endl;
-    // std::cout << trailNumber << std::endl;
+    // std::cout << varJumpTimer << std::endl;
 }
 
 void Player::setupStateCallbacks() {
@@ -92,24 +101,33 @@ PlayerState Player::normalBegin() {
 
 PlayerState Player::normalUpdate() {
     // 地面检测
-    if (speed.y >= 0)
-        groundCheck();
+    groundCheck();
+
+    // 攀爬跳保护计时
+    if (climbJumpProtectionTimer > 0) {
+        climbJumpProtectionTimer -= deltaTime;
+    }
+
+    // 朝向检测
+    if (moveX)
+        facing = moveX;
 
     // 检查冲刺
     if (input_.dash.pressed && dashes)
         return PlayerState::Dash;
 
     // 检查攀爬
+    if (input_.climb.check && climbCheck(facing)
+        && climbJumpProtectionTimer <= 0)
+        return PlayerState::Climb;
 
-    // 水平移动
-    moveHControl();
-
-    // 墙面滑动
-    wallSlideCheck();
+    moveHControl(); // 水平移动
+    wallSlideCheck(); // 墙面滑动
+    wallBoostCheck(); // 墙面助推
 
     // 应用重力
-    if (! onGround)
-        applyGravity();
+    applyGravity();
+    // std::cout << maxFall << std::endl;
 
     // 跳跃处理
     jumpControl();
@@ -122,10 +140,62 @@ void Player::normalEnd() {
 }
 
 PlayerState Player::climbBegin() {
+    // 初始化
+    speed.x = 0;
+    speed.y *= ClimbGrabYMult;
+    wallSlideTimer = WallSlideTime;
+    climbNoMoveTimer = ClimbNoMoveTime;
+    wallBoostTimer = 0;
+
+    // 对齐至墙面
+    for (int i = 0; i < ClimbCheckDist; i++) {
+        if (checkNextCollide({facing, 0}).empty())
+            player_.move({facing, 0});
+        else
+            break;
+    }
     return PlayerState::Climb;
 }
 
 PlayerState Player::climbUpdate() {
+    // 更新状态
+    groundCheck();
+    if (climbNoMoveTimer > 0)
+        climbNoMoveTimer -= deltaTime;
+    if (onGround)
+        stamina = ClimbMaxStamina;
+
+    // 跳跃检测
+    if (input_.jump.pressed) {
+        if (moveX == -static_cast<int>(facing))
+            wallJump(-static_cast<int>(facing));
+        else
+            climbJump();
+        return PlayerState::Normal;
+    }
+
+    // 冲刺检测
+    if (input_.dash.pressed && dashes)
+        return PlayerState::Dash;
+
+    // 松开抓取键检测
+    if (! input_.climb.check)
+        return PlayerState::Normal;
+
+    // 墙面丢失检测
+    if (checkNextCollide({facing, 0}).empty()) {
+        if (speed.y < 0)
+            climbHop();
+        return PlayerState::Normal;
+    }
+
+    handleNormalClimbing(); // 执行正常攀爬行为
+    handleStaminaConsumption(); // 执行体力消耗和状态管理
+
+    // 体力耗尽
+    if (stamina <= 0)
+        return PlayerState::Normal;
+
     return PlayerState::Climb;
 }
 
@@ -156,27 +226,45 @@ PlayerState Player::dashBegin() {
         lastAim.y = 1;
     else
         lastAim.y = 0;
-    if (lastAim.x == 0 && lastAim.y == 0) lastAim = {1, 0};
+    if (lastAim.x == 0 && lastAim.y == 0) lastAim = {facing, 0};
     lastAim = lastAim.normalized(); // 标准化向量
     trailNumber = TrailNumber; // 设定残影数量
     trailCreationTimer = 0; // 初始化计时器
+    dashAttackTimer = DashAttackTime;
+    dashRefillCooldownTimer = DashRefillCooldownTime;
     beforeDashSpeed = speed;
     if (lastAim.y < 0)
         onGround = false;
 
     shakeCallback(lastAim); // 初始化震动
+    particleEmitter_.emitDashLine(player_.getPosition(), lastAim); // 发射冲刺轨迹线
+    particleEmitter_.emitDashBurst(player_.getPosition(), 10); // 发射圆形冲击波
 
     return PlayerState::Dash;
 }
 
 PlayerState Player::dashUpdate() {
-    if (input_.jump.pressed && onGround) {
+    // 更新计时器
+    if (dashRefillCooldownTimer > 0)
+        dashRefillCooldownTimer -= deltaTime;
+
+    // 更新是否落地
+    groundCheck(false);
+
+    // 处理超级跳
+    if (input_.jump.pressed && onGround && lastAim.x != 0) {
         stateMachine_.stopCoroutine();
-        jump();
+        superJump();
         return PlayerState::Normal;
     }
+
+    // 处理协程状态
     if (messages_.isDone)
         return PlayerState::Normal;
+
+    // 发射粒子
+    particleEmitter_.emitDashLaunch(player_.getPosition(), lastAim);
+
     return PlayerState::Dash;
 }
 
@@ -198,6 +286,7 @@ int Player::dashCoroutine(void *priv) {
         std::abs(beforeDashSpeed.x) > std::abs(newSpeed.x))
         newSpeed.x = beforeDashSpeed.x;
 
+    dashDir = dir;
     speed = newSpeed;
 
     // 0.15s 冲刺阶段
@@ -239,6 +328,18 @@ void Player::jumpControl() {
     if (input_.jump.buffered) { // 跳跃瞬间
         if (jumpGraceTimer > 0) { // 在宽限时间内
             jump();
+        } else { // 墙跳检测
+            if (wallJumpCheck(1)) {
+                if (dashAttackTimer > 0 && dashDir.x == 0 && dashDir.y == -1)
+                    superWallJump(-1);
+                else
+                    wallJump(-1);
+            } else if (wallJumpCheck(-1)) {
+                if (dashAttackTimer > 0 && dashDir.x == 0 && dashDir.y == -1)
+                    superWallJump(1);
+                else
+                    wallJump(1);
+            }
         }
         return ;
     }
@@ -255,18 +356,31 @@ void Player::jumpControl() {
 
 void Player::wallSlideCheck() {
     maxFall = MaxFall;
-    if (input_.down.check == false && speed.y >= 0 && wallSlideTimer > 0 &&
-        checkNextCollide(sf::Vector2f(1, 0) * static_cast<float>(moveX)).empty() == false) {
+    if (input_.down.check == false && speed.y > 0 && wallSlideTimer > 0 &&
+        ! checkNextCollide(sf::Vector2f(1, 0) * static_cast<float>(moveX)).empty()) {
         wallSlideDir = moveX;
     }
     if (wallSlideDir != 0) {
         maxFall = std::lerp(MaxFall, WallSlideStartMax, wallSlideTimer / WallSlideTime); // 插值，使最大下落速度缓慢提升
+        // 发射粒子
+        particleEmitter_.emitWallJump(player_.getPosition() + sf::Vector2f(facing * 40, 0),
+                              1, -25, 55, -facing);
     }
-    if (wallSlideTimer > 0) {
+    if (wallSlideTimer > 0 && wallSlideDir) {
         wallSlideTimer = approach(wallSlideTimer, 0, deltaTime);
         wallSlideDir = 0;
     }
-    // std::cout << wallSlideTimer << std::endl;
+}
+
+void Player::wallBoostCheck() {
+    if (wallBoostTimer <= 0) return ;
+    wallBoostTimer -= deltaTime;
+    if (moveX == wallBoostDir) {
+        // 切换至墙跳
+        speed.x = WallJumpHSpeed * moveX;
+        stamina += ClimbJumpCost; // 返还体力
+        wallBoostTimer = 0;
+    }
 }
 
 void Player::trailControl() {
@@ -281,14 +395,47 @@ void Player::trailControl() {
     }
 }
 
-void Player::groundCheck() {
-    if (speed.y >= 0) { // 只有下落或静止时检测
-        if (checkNextCollide({0, 1}).empty()) {
-            onGround = false;
-        } else {
-            onGround = true;
-            dashes = MaxDashes;
-        }
+void Player::groundCheck(bool replyDash) {
+    if (checkNextCollide({0, 1}).empty()) {
+        onGround = false;
+    } else {
+        onGround = true;
+        if (replyDash) dashes = MaxDashes;
+    }
+}
+
+bool Player::climbCheck(int dir, float yAdd) {
+    return ! checkNextCollide({dir * ClimbCheckDist, yAdd}).empty() && stamina > 0;
+}
+
+bool Player::wallJumpCheck(float dir) {
+    return ! checkNextCollide({dir * WallJumpCheckDist, 0}).empty();
+}
+
+void Player::handleNormalClimbing() {
+    if (climbNoMoveTimer > 0) return ;
+    float target = 0;
+
+    if (input_.up.check)
+        target = ClimbUpSpeed;
+    else if (input_.down.check) {
+        target = ClimbDownSpeed;
+        // 发射粒子
+        particleEmitter_.emitWallJump(player_.getPosition() + sf::Vector2f(facing * 40, 0),
+                              1, -25, 55, -facing);
+    }
+
+    lastClimbMove = target != 0 ? std::copysign(1.0, target) : 0;
+    speed.y = approach(speed.y, target, ClimbAccel * deltaTime);
+}
+
+void Player::handleStaminaConsumption() {
+    if (climbNoMoveTimer > 0) return ;
+    if (lastClimbMove == -1) {
+        stamina -= ClimbUpCost * deltaTime;
+    } else {
+        if (lastClimbMove == 0)
+            stamina -= ClimbStillCost * deltaTime;
     }
 }
 
@@ -301,7 +448,7 @@ std::vector<Entity> Player::checkNextCollide(sf::Vector2f unit) {
     return nowlevel_.collision(sf::FloatRect(position + unit, size));
 }
 
-void Player::jump() {
+void Player::jump(bool particle) {
     // 消费跳跃缓冲
     input_.jump.consumeBuffer();
 
@@ -321,8 +468,102 @@ void Player::jump() {
     varJumpSpeed = speed.y;
 
     // 发射粒子效果
+    if (particle)
+        particleEmitter_.emitLandingDust(player_.getPosition() + sf::Vector2f(0, 55),
+                                1, -40, 40);
+}
+
+void Player::superJump() {
+    // 初始化
+    input_.jump.consumeBuffer();
+    jumpGraceTimer = 0;
+    varJumpTimer = VarJumpTime;
+    wallSlideTimer = WallSlideTime;
+    wallBoostTimer = 0;
+    dashAttackTimer = 0;
+
+    // 应用速度
+    speed.x = SuperJumpH * facing;
+    speed.y = SuperJumpSpeed;
+    if (lastAim.y > 0) { // 斜下冲刺触发
+        speed.x *= DuckSuperJumpXMult;
+        speed.y *= DuckSuperJumpYMult;
+    }
+    varJumpSpeed = speed.y;
+
+    // 回复冲刺次数
+    if (dashRefillCooldownTimer <= 0)
+        dashes = MaxDashes;
+
+    // 发射粒子
     particleEmitter_.emitLandingDust(player_.getPosition() + sf::Vector2f(0, 55),
-                            1, -40, 40);
+                                1.5, -40, 40);
+}
+
+void Player::wallJump(int dir) {
+    // 初始化
+    input_.jump.consumeBuffer();
+    jumpGraceTimer = 0;
+    varJumpTimer = VarJumpTime;
+    wallSlideTimer = WallSlideTime;
+    wallBoostTimer = 0;
+
+    // 强制移动
+    if (moveX != 0) {
+        forceMoveX = dir;
+        forceMoveXTimer = WallJumpForceTime;
+    }
+
+    // 设置速度
+    speed.x = WallJumpHSpeed * dir;
+    speed.y = WallJumpSpeedY;
+    varJumpSpeed = speed.y;
+
+    // 发射粒子
+    particleEmitter_.emitWallJump(player_.getPosition() + sf::Vector2f(-dir * 40, 0),
+                          15, -25, 55, dir);
+}
+
+void Player::superWallJump(int dir) {
+    // 初始化
+    input_.jump.consumeBuffer();
+    jumpGraceTimer = 0;
+    varJumpTimer = SuperWallJumpVarTime;
+    wallSlideTimer = WallSlideTime;
+    wallBoostTimer = 0;
+
+    // 设置速度
+    speed.x = SuperWallJumpH * dir;
+    speed.y = SuperWallJumpSpeedY;
+    varJumpSpeed = speed.y;
+
+    // 发射粒子
+    particleEmitter_.emitWallJump(player_.getPosition() + sf::Vector2f(-dir * 40, 0),
+                          25, -25, 55, dir);
+}
+
+void Player::climbJump() {
+    climbJumpProtectionTimer = ClimbJumpProtectionTime;
+    if (!onGround) {
+        stamina -= ClimbJumpCost;
+    }
+    jump(false);
+    // 墙面助推
+    if (moveX == 0)  // 没有水平输入时
+    {
+        wallBoostDir = -facing;           // 助推方向与面朝方向相反
+        wallBoostTimer = ClimbJumpBoostTime;   // 0.2秒助推窗口
+    }
+    // 发射粒子
+    particleEmitter_.emitWallJump(player_.getPosition() + sf::Vector2f(facing * 40, 0),
+                          20, -15, 55, -facing);
+}
+
+void Player::climbHop() {
+    speed.x = facing * ClimbHopX;
+    speed.y = std::min(speed.y, ClimbHopY);
+    forceMoveX = 0;
+    forceMoveXTimer = ClimbHopForceTime;
 }
 
 bool Player::moveH(float h) {
@@ -416,6 +657,7 @@ void Player::onCollideH(const CollisionData& data) {
         }
 
         speed.x = 0;
+        dashAttackTimer = 0;
     } else {
         moveH(data.Remaining.x);
     }
@@ -444,6 +686,7 @@ void Player::onCollideV(const CollisionData& data) {
         }
 
         speed.y = 0;
+        dashAttackTimer = 0;
     } else {
         moveV(data.Remaining.y);
     }
@@ -456,12 +699,12 @@ void Player::handleRightWallCollision(const CollisionData &data) {
 }
 
 void Player::handleGroundCollision(const CollisionData &data) {
-    // 设置状态
+    // 更新状态
+    stamina = ClimbMaxStamina;
     wallSlideTimer = WallSlideTime;
-
     // 发射粒子效果
     particleEmitter_.emitLandingDust(player_.getPosition() + sf::Vector2f(0, 55),
-                            (data.Moved.y + data.Remaining.y) / deltaTime / (DashSpeed / 2), -40, 40);
+                            (data.Moved.y + data.Remaining.y) / deltaTime / (DashSpeed / 1.5), -40, 40);
 }
 
 void Player::handleCeilingCollision(const CollisionData &data) {
@@ -520,7 +763,7 @@ bool Player::dashDownCornerCorrection() {
 }
 
 bool Player::horizontalCornerCorrection() {
-    if (std::abs(speed.x) < 100) return false;
+    if (std::abs(speed.x) < 1000) return false;
 
     float dirX = std::copysign(1.0, speed.x);
 
@@ -545,6 +788,11 @@ void Player::applyGravity() {
         float mult = (std::abs(speed.y) < HalfGravThreshold && input_.jump.check) ? 0.5 : 1.0;
         speed.y = approach(speed.y, maxFall, Gravity * mult * deltaTime);
     }
+}
+
+void Player::updateDashAttackTimer() {
+    if (dashAttackTimer > 0)
+        dashAttackTimer -= deltaTime;
 }
 
 

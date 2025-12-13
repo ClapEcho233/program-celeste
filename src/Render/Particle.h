@@ -20,7 +20,7 @@
 #include <iostream>
 #include <SFML/Graphics.hpp>
 
-static std::mt19937 rarticleRng;
+static std::mt19937 particleRng;
 static std::uniform_real_distribution randomFloat(0.0f, 1.0f);
 
 class Particle: public IRenderable {
@@ -52,9 +52,6 @@ public:
 // 粒子发射&管理器
 class ParticleEmitter: public IRenderable {
 private:
-    static constexpr float MaxStayTime = 0.9;  // 粒子最大持续时间
-    static constexpr float FadeTime = 0.1;     // 粒子淡出时间
-
     const sf::Color Dust = sf::Color::White;                              // 灰尘颜色
     const sf::Color DashResidue = sf::Color(68, 183, 255); // 冲刺残留颜色
 
@@ -76,6 +73,22 @@ public:
      * @param R 起始位置右边界 (相对于中心位置)
      */
     void emitLandingDust(const sf::Vector2f& position, float intensity, float L, float R);
+
+    /**
+     * 墙跳灰尘粒子
+     * @param position 中心位置
+     * @param number 粒子数
+     * @param U 起始位置上边界 (相对于中心位置)
+     * @param D 起始位置下边界 (相对于中心位置)
+     * @param dir 方向
+     */
+    void emitWallJump(const sf::Vector2f& position, float number, float U, float D, float dir);
+
+    // 冲刺相关粒子
+    void emitDashLine(const sf::Vector2f& position, const sf::Vector2f& dir);   // 冲刺轨迹线粒子
+    void emitDashBurst(const sf::Vector2f& position, float intensity);          // 冲刺原地爆炸粒子
+    void emitDashLaunch(const sf::Vector2f& position, const sf::Vector2f& dir); // 冲刺残留粒子
+
 };
 
 

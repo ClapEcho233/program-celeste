@@ -32,8 +32,9 @@ void Particle::update() {
 
     // 应用速度
     position_ += velocity_ * deltaTime;
-    position_ += sf::Vector2f(10.0 * dir(rarticleRng), 10.0 * dir(rarticleRng)) *
-                    (randomFloat(rarticleRng) * deltaTime); // 随机位移
+    if (velocity_ != sf::Vector2f(0, 0))
+        position_ += sf::Vector2f(10.0 * dir(particleRng), 10.0 * dir(particleRng)) *
+                    (randomFloat(particleRng) * deltaTime); // 随机位移
 
     // 应用阻力
     float newSpeed = std::max (0.0f, std::hypot(velocity_.x, velocity_.y) - dragForce_ * deltaTime);
@@ -83,7 +84,7 @@ void ParticleEmitter::emitLandingDust(const sf::Vector2f &position, float intens
     std::uniform_real_distribution<float> angleDist(-90.0, 90.0); // 角度扩散
     std::uniform_real_distribution<float> speedDist(25.0f, 75.0f * intensity); // 速度基于强度
 
-    for (int i = 0; i < particleCount; ++i) {
+    for (int i = 0; i < particleCount; i++) {
         // 随机角度（转换为弧度）
         float angle = angleDist(gen) * std::numbers::pi / 180.0f;
 
@@ -103,11 +104,9 @@ void ParticleEmitter::emitLandingDust(const sf::Vector2f &position, float intens
         float size = 10;
         sf::Vector2f particleSize(size, size);
 
-        // 创建粒子（高阻力，短停留）
-        float drag = 50.0f + randomFloat(gen) * 100.0f; // 高阻力让粒子快速停下
-        // float drag = 0;
-        float stayTime = 0.1f + randomFloat(gen) * 0.1f; // 短停留
-        float fadeTime = 0.1f + randomFloat(gen) * 0.1f; // 较长淡出
+        float drag = 50.0f + randomFloat(gen) * 100.0f;
+        float stayTime = 0.1f + randomFloat(gen) * 0.1f;
+        float fadeTime = 0.1f + randomFloat(gen) * 0.1f;
 
         particles_.emplace_back(
             nowPositon,
@@ -120,3 +119,150 @@ void ParticleEmitter::emitLandingDust(const sf::Vector2f &position, float intens
         );
     }
 }
+
+void ParticleEmitter::emitWallJump(const sf::Vector2f &position, float number, float U, float D, float dir) {
+    // 初始化随机器
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> angleDist(-180.0, 180.0); // 角度扩散
+    std::uniform_real_distribution<float> speedDist(25.0f, 75.0f);
+
+    for (int i = 0; i < number; i++) {
+        // 随机角度（转换为弧度）
+        float angle = angleDist(gen) * std::numbers::pi / 180.0f;
+
+        // 随机位置
+        sf::Vector2f nowPositon = position;
+        nowPositon.x = nowPositon.x + 22.0 * randomFloat(gen) * dir;
+        nowPositon.y = nowPositon.y + U + (D - U) * randomFloat(gen);
+
+        // 计算速度方向
+        float speed = speedDist(gen);
+        sf::Vector2f velocity(
+            std::abs(std::sin(angle)) * dir * speed,
+            std::cos(angle) * speed
+        );
+
+        // 粒子尺寸
+        float size = 10;
+        sf::Vector2f particleSize(size, size);
+
+        float drag = 50.0f + randomFloat(gen) * 100.0f;
+        float stayTime = 0.1f + randomFloat(gen) * 0.1f;
+        float fadeTime = 0.1f + randomFloat(gen) * 0.1f;
+
+        particles_.emplace_back(
+            nowPositon,
+            particleSize,
+            velocity,
+            Dust,
+            drag,
+            stayTime,
+            fadeTime
+        );
+    }
+}
+
+void ParticleEmitter::emitDashLine(const sf::Vector2f &position, const sf::Vector2f &dir) {
+    // 初始化
+    int halfLength = 8; // 轨迹线长度的一半（单位为粒子）
+    std::random_device rd;
+    std::mt19937 gen(rd());
+
+    for (int i = 0; i < halfLength; ++i) {
+        for (int sign = -1; sign <= 1; sign += 2) {
+            // 初始化粒子状态
+            float stayTime = 0.1 + i * 0.02;
+            float fadeTime = 0.05 + randomFloat(gen) * 0.05;
+            sf::Vector2f nowPositon = position + dir * (i * 10.0f * sign);
+            float size = 10;
+            sf::Vector2f particleSize(size, size);
+
+            particles_.emplace_back(
+                nowPositon,
+                particleSize,
+                sf::Vector2f(0, 0),
+                Dust,
+                0,
+                stayTime,
+                fadeTime
+            );
+        }
+    }
+}
+
+void ParticleEmitter::emitDashBurst(const sf::Vector2f &position, float intensity) {
+    // 根据强度决定粒子数量
+    int particleCount = static_cast<int>(5 + intensity * 15);
+
+    // 初始化随机
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> angleDist(-180.0, 180.0); // 角度扩散
+    std::uniform_real_distribution<float> speedDist(20.0f, 10.0f); // 速度基于强度
+
+    for (int i = 0; i < particleCount; ++i) {
+        // 随机角度（转换为弧度）
+        float angle = angleDist(gen) * std::numbers::pi / 180.0f;
+
+        // 随机位置
+        auto randonMove = sf::Vector2f(std::sin(angle) * 38 * (randomFloat(gen) / 1.7 + 1),
+                                       std::cos(angle) * 38 * (randomFloat(gen) / 1.7 + 1));
+        sf::Vector2f nowPositon = position + randonMove;
+        // 计算速度方向（向上扇形）
+        float speed = speedDist(gen);
+        sf::Vector2f velocity(std::sin(angle) * speed, std::cos(angle) * speed);
+
+        // 粒子尺寸
+        float size = 10;
+        sf::Vector2f particleSize(size, size);
+
+        float drag = 50.0 + randomFloat(gen) * 100.0;
+        float stayTime = 0.05 + randomFloat(gen) * 0.01;
+        float fadeTime = 0.01 + randomFloat(gen) * 0.03;
+
+        particles_.emplace_back(
+            nowPositon,
+            particleSize,
+            velocity,
+            Dust,
+            drag,
+            stayTime,
+            fadeTime
+        );
+    }
+}
+
+void ParticleEmitter::emitDashLaunch(const sf::Vector2f &position, const sf::Vector2f &dir) {
+    // 初始化随机器
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution sign(-1, 1);
+    std::uniform_real_distribution<float> angleDist(-45, 45); // 角度扩散
+    std::uniform_real_distribution<float> speedDist(150.0, 200.0);
+
+    // 初始化粒子状态
+    sf::Vector2f nowPositon = position + sf::Vector2f(20.0 * sign(gen), 20.0 * sign(gen)) *
+                                                     (randomFloat(gen) * deltaTime);
+    float stayTime = 0.8 + randomFloat(gen) * 0.5;
+    float fadeTime = 0.1f + randomFloat(gen) * 0.1f;
+    float drag = 10.0 + randomFloat(gen) * 10.0;
+    float speed = speedDist(gen);
+    float angle = angleDist(gen) * std::numbers::pi / 180.0f + std::atan2(dir.x, dir.y);
+    float size = 10;
+
+    sf::Vector2f particleSize(size, size);
+    sf::Vector2f velocity(std::sin(angle) * speed, std::cos(angle) * speed);
+
+    particles_.emplace_back(
+            nowPositon,
+            particleSize,
+            velocity,
+            DashResidue,
+            drag,
+            stayTime,
+            fadeTime
+        );
+}
+
+

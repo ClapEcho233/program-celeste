@@ -47,8 +47,8 @@ void Game::render() {
     line_.render(window_);
 
     // 渲染对象
-    levelManager_.render(window_);
     player_ -> render(window_);
+    levelManager_.render(window_);
 
     window_.display();
 }

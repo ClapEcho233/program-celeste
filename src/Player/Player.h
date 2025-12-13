@@ -20,35 +20,67 @@ enum class State {Normal, Climb, Dash};
 
 class Player : public IRenderable {
 private:
-    static constexpr float MaxFall = 1600;               // 最大下落速度
-    static constexpr float Gravity = 9000;               // 重力加速度 (像素/秒²)
-    static constexpr float FastMaxFall = 2400;           // 快速下落最大速度
-    static constexpr float FastMaxAccel = 3000;          // 快速下落加速度
-    static constexpr float HalfGravThreshold = 400;      // 半重力阈值速度
+    static constexpr float MaxFall = 1600;                           // 最大下落速度
+    static constexpr float Gravity = 9000;                           // 重力加速度 (像素/秒²)
+    static constexpr float FastMaxFall = 2400;                       // 快速下落最大速度
+    static constexpr float FastMaxAccel = 3000;                      // 快速下落加速度
+    static constexpr float HalfGravThreshold = 400;                  // 半重力阈值速度
 
-    static constexpr float MaxRun = 900;                 // 最大跑步速度
-    static constexpr float RunAccel = 10000;             // 跑步加速度
-    static constexpr float RunReduce = 4000;             // 超速时减速力
-    static constexpr float AirMult = 0.65;               // 空中移动系数
-    static constexpr float WalkSpeed = 640;              // 行走速度
+    static constexpr float MaxRun = 900;                             // 最大跑步速度
+    static constexpr float RunAccel = 10000;                         // 跑步加速度
+    static constexpr float RunReduce = 4000;                         // 超速时减速力
+    static constexpr float AirMult = 0.65;                           // 空中移动系数
+    static constexpr float WalkSpeed = 640;                          // 行走速度
 
-    static constexpr float JumpSpeed = -1050;            // 跳跃初始速度 (向上为负)
-    static constexpr float JumpHBoost = 400;             // 跳跃水平助推
-    static constexpr float VarJumpTime = 0.2;            // 可变跳跃时间窗口
-    static constexpr float CeilingVarJumpGrace = 0.05;   // 天花板碰撞跳跃宽限
-    static constexpr float JumpGraceTime = 0.1;          // 地面跳跃宽限时间
+    static constexpr float JumpSpeed = -1050;                        // 跳跃初始速度 (向上为负)
+    static constexpr float JumpHBoost = 400;                         // 跳跃水平助推
+    static constexpr float VarJumpTime = 0.2;                        // 可变跳跃时间窗口
+    static constexpr float CeilingVarJumpGrace = 0.05;               // 天花板碰撞跳跃宽限
+    static constexpr float JumpGraceTime = 0.1;                      // 地面跳跃宽限时间
 
-    static constexpr float CornerCorrection = 40;  // 墙角修正宽限像素
+    static constexpr float CornerCorrection = 40;                    // 墙角修正宽限像素
 
-    static constexpr float WallSlideStartMax = 200;      // 墙面滑动起始最大下落速度
-    static constexpr float WallSlideTime = 1.2;          // 墙面滑动总时间
+    static constexpr float WallSlideStartMax = 200;                  // 墙面滑动起始最大下落速度
+    static constexpr float WallSlideTime = 1.2;                      // 墙面滑动总时间
 
-    static constexpr float MaxDashes = 1;                // 最大冲刺次数
-    static constexpr float DashSpeed = 2400;             // 冲刺速度
-    static constexpr float EndDashSpeed = 1600;          // 冲刺结束速度
-    static constexpr float EndDashUpMult = 0.75;         // 冲刺结束上升动量
-    static constexpr float TrailCreationTime = 0.03;     // 残影创建时间间隔 (初始)
-    static constexpr float TrailNumber = 4;              // 残影数量
+    static constexpr float MaxDashes = 1;                            // 最大冲刺次数
+    static constexpr float DashSpeed = 2400;                         // 冲刺速度
+    static constexpr float EndDashSpeed = 1600;                      // 冲刺结束速度
+    static constexpr float EndDashUpMult = 0.75;                     // 冲刺结束上升动量
+    static constexpr float TrailCreationTime = 0.03;                 // 残影创建时间间隔 (初始)
+    static constexpr float TrailNumber = 4;                          // 残影数量
+    static constexpr float DashAttackTime = 0.3;                     // 冲刺攻击时间
+
+    static constexpr float ClimbMaxStamina = 110;                    // 最大体力
+    static constexpr float ClimbUpCost = 100 / 2.2;                  // 向上爬体力消耗 (=45.45/s)
+    static constexpr float ClimbStillCost = 100 / 10.0;              // 静止体力消耗 (=10/s)
+    static constexpr float ClimbJumpCost = 110 / 4.0;                // 攀爬跳跃体力消耗 (=27.5/s)
+    static constexpr float ClimbCheckDist = 20;                      // 攀爬检测距离
+    static constexpr float ClimbNoMoveTime = 0.1;                    // 抓墙后短暂不可移动时间
+    static constexpr float ClimbTiredThreshold = 20;                 // 疲劳阈值
+    static constexpr float ClimbUpSpeed = -450;                      // 向上爬速度
+    static constexpr float ClimbDownSpeed = 800;                     // 向下爬速度
+    static constexpr float ClimbAccel = 9000;                        // 攀爬加速度
+    static constexpr float ClimbGrabYMult = 0.2;                     // 抓墙时垂直速度乘数
+    static constexpr float ClimbHopY = -1200;                        // 攀爬跳跃垂直速度
+    static constexpr float ClimbHopX = 1000;                         // 攀爬跳跃水平速度
+    static constexpr float ClimbHopForceTime = 0.2;                  // 攀爬跳跃强制移动时间
+    static constexpr float ClimbJumpProtectionTime = 0.2;            // 墙跳保护时间
+    static constexpr float ClimbJumpBoostTime = 0.2;                 // 墙面助推时间
+
+    static constexpr float SuperJumpSpeed = JumpSpeed;               // 超级跳垂直速度
+    static constexpr float SuperJumpH = 2600;                        // 超级跳水平速度
+    static constexpr float DuckSuperJumpXMult = 1.25;                // 下蹲超级跳跃水平倍数
+    static constexpr float DuckSuperJumpYMult = 0.5;                 // 下蹲超级跳跃垂直倍数
+    static constexpr float DashRefillCooldownTime = 0.1;             // 超级跳回复冲刺冷却时间
+    static constexpr float WallJumpCheckDist = 30;                   // 墙跳检测距离
+    static constexpr float WallJumpForceTime = 0.16;                 // 墙跳强制移动时间
+    static constexpr float WallJumpHSpeed = MaxRun + JumpHBoost;     // 墙跳水平速度
+    static constexpr float WallJumpSpeedY = -1050;                   // 墙跳垂直速度
+    static constexpr float SuperWallJumpSpeedY = -1600;              // 超级墙跳垂直速度
+    static constexpr float SuperWallJumpVarTime = 0.25;              // 超级墙跳可变时间
+    static constexpr float SuperWallJumpForceTime = 0.2;             // 超级墙跳强制时间
+    static constexpr float SuperWallJumpH = MaxRun + JumpHBoost * 2; // 超级墙跳水平速度
 
     //------------------------------------------------------------------------------------------------------------------
 
@@ -75,27 +107,38 @@ private:
     ParticleEmitter particleEmitter_; // 粒子发射器
 
 
-    // 物理属性
-    sf::Vector2f speed;
-    int moveX; // 输入水平移动方向 (1:右 -1:左)
+    // 状态
 
-    // 状态相关
-    bool onGround;
-    bool wasOnGround;
+    float facing; // 朝向
+    int moveX; // 输入水平移动方向 (1:右 -1:左)
+    float stamina; // 体力
+    bool onGround; // 是否站在地上
+    bool wasOnGround; // 上一帧是否站在地上
     int dashes; // 当前冲刺次数
     float varJumpSpeed; // 可变跳跃基准速度
     float maxFall; // 最大下落速度
     int wallSlideDir; // 墙壁滑行面向方向
+    int forceMoveX; // 强制移动方向
+    int lastClimbMove; // 上次攀爬移动方向
+    float wallBoostDir; // 墙面助推方向
+    sf::Vector2f speed; // 速度
     sf::Vector2f lastAim; // 最后瞄准方向
-    sf::Vector2f beforeDashSpeed;
+    sf::Vector2f beforeDashSpeed; // 冲刺前速度
+    sf::Vector2f dashDir; // 冲刺速度
 
-    int trailNumber; // 剩余残影数量
+    int trailNumber = 0; // 剩余残影数量
 
     // 计时器
     float jumpGraceTimer; // 跳跃宽限计时器 (0.1s)
     float varJumpTimer; // 可变跳跃计时器 (0.2s)
     float wallSlideTimer; // 墙壁滑行计时器 (1.2s)
     float trailCreationTimer; // 残影创建计时器 (0.2s)
+    float forceMoveXTimer; // 强制移动计时器
+    float climbNoMoveTimer; // 攀爬不可移动计时器 (0.1s)
+    float wallBoostTimer; // 墙面助推计时器 (0.2s)
+    float climbJumpProtectionTimer; // 墙跳保护计时器 (0.2s)
+    float dashAttackTimer; // 冲刺攻击计时器 (0.3s)
+    float dashRefillCooldownTimer; // 超级跳回复冲刺冷却计时器 (0.1s)
 
     // 回调函数
     std::function<void(sf::Vector2f)> shakeCallback;
@@ -132,16 +175,26 @@ private:
     void moveHControl(); // 水平移动控制
     void jumpControl(); // 跳跃控制
     void wallSlideCheck(); // 墙壁滑行检测
+    void wallBoostCheck(); // 墙面助推检测
     void trailControl(); // 残影控制
 
-    // 地面检测（此时是否位于地面）
-    void groundCheck();
+    void groundCheck(bool replyDash = true); // 地面检测（此时是否位于地面）
+    bool climbCheck(int dir, float yAdd = 0); // 攀爬检测
+    bool wallJumpCheck(float dir); // 墙跳条件检测
+
+    void handleNormalClimbing(); // 处理正常攀爬
+    void handleStaminaConsumption(); // 处理体力消耗和状态管理
 
     // 检测下一刻会不会碰撞
     std::vector<Entity> checkNextCollide(sf::Vector2f unit);
 
     // 跳跃
-    void jump();
+    void jump(bool particle = true); // 普通跳跃
+    void superJump(); // 超级跳跃
+    void wallJump(int dir); // 离墙跳跃
+    void superWallJump(int dir); // 超级离墙跳跃
+    void climbJump(); // 攀爬跳跃 (沿墙面向上)
+    void climbHop(); // 自动跳上平台
 
     // 应用移动，返回是否移动了任何距离
     bool moveH(float h); // 应用水平移动
@@ -164,8 +217,9 @@ private:
     bool dashDownCornerCorrection(); // 冲刺向下墙角修正
     bool horizontalCornerCorrection(); // 水平墙角修正
 
-    // 应用重力
-    void applyGravity();
+    void applyGravity(); // 应用重力
+
+    void updateDashAttackTimer(); // 更新冲刺攻击计时器
 
     /**
      * 插值函数，用于使当前值靠近目标值
