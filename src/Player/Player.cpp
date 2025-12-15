@@ -51,9 +51,10 @@ void Player::update() {
     // 更新残影
     trailControl();
     trailEffectManager_.update();
-
     // 更新粒子
     particleEmitter_.update();
+    // 更新动画
+    animationComponent_.update();
 
     // 执行状态更新
     stateMachine_.update();
@@ -95,6 +96,8 @@ void Player::setupStateCallbacks() {
 }
 
 PlayerState Player::normalBegin() {
+    dashRefillCooldownTimer = 0;
+    jumpGraceTimer = 0;
     std::cout << "Enter Normal State" << std::endl;
     return PlayerState::Normal;
 }
@@ -125,12 +128,11 @@ PlayerState Player::normalUpdate() {
     wallSlideCheck(); // 墙面滑动
     wallBoostCheck(); // 墙面助推
 
-    // 应用重力
-    applyGravity();
-    // std::cout << maxFall << std::endl;
-
     // 跳跃处理
     jumpControl();
+
+    // 应用重力
+    applyGravity();
 
     return PlayerState::Normal;
 }
@@ -327,7 +329,10 @@ void Player::jumpControl() {
     }
     if (input_.jump.buffered) { // 跳跃瞬间
         if (jumpGraceTimer > 0) { // 在宽限时间内
-            jump();
+            if (dashAttackTimer > 0 && lastAim.x != 0 && onGround)
+                superJump();
+            else
+                jump();
         } else { // 墙跳检测
             if (wallJumpCheck(1)) {
                 if (dashAttackTimer > 0 && dashDir.x == 0 && dashDir.y == -1)
@@ -471,6 +476,8 @@ void Player::jump(bool particle) {
     if (particle)
         particleEmitter_.emitLandingDust(player_.getPosition() + sf::Vector2f(0, 55),
                                 1, -40, 40);
+    // 启动动画
+    animationComponent_.triggerJump();
 }
 
 void Player::superJump() {
@@ -483,7 +490,7 @@ void Player::superJump() {
     dashAttackTimer = 0;
 
     // 应用速度
-    speed.x = SuperJumpH * facing;
+    speed.x = SuperJumpH * (moveX == 0 ? facing : moveX);
     speed.y = SuperJumpSpeed;
     if (lastAim.y > 0) { // 斜下冲刺触发
         speed.x *= DuckSuperJumpXMult;
@@ -498,6 +505,8 @@ void Player::superJump() {
     // 发射粒子
     particleEmitter_.emitLandingDust(player_.getPosition() + sf::Vector2f(0, 55),
                                 1.5, -40, 40);
+    // 启动动画
+    animationComponent_.triggerJump();
 }
 
 void Player::wallJump(int dir) {
@@ -522,6 +531,8 @@ void Player::wallJump(int dir) {
     // 发射粒子
     particleEmitter_.emitWallJump(player_.getPosition() + sf::Vector2f(-dir * 40, 0),
                           15, -25, 55, dir);
+    // 启动动画
+    animationComponent_.triggerJump();
 }
 
 void Player::superWallJump(int dir) {
@@ -540,6 +551,8 @@ void Player::superWallJump(int dir) {
     // 发射粒子
     particleEmitter_.emitWallJump(player_.getPosition() + sf::Vector2f(-dir * 40, 0),
                           25, -25, 55, dir);
+    // 启动动画
+    animationComponent_.triggerJump();
 }
 
 void Player::climbJump() {
@@ -557,6 +570,8 @@ void Player::climbJump() {
     // 发射粒子
     particleEmitter_.emitWallJump(player_.getPosition() + sf::Vector2f(facing * 40, 0),
                           20, -15, 55, -facing);
+    // 启动动画
+    animationComponent_.triggerJump();
 }
 
 void Player::climbHop() {
@@ -705,6 +720,8 @@ void Player::handleGroundCollision(const CollisionData &data) {
     // 发射粒子效果
     particleEmitter_.emitLandingDust(player_.getPosition() + sf::Vector2f(0, 55),
                             (data.Moved.y + data.Remaining.y) / deltaTime / (DashSpeed / 1.5), -40, 40);
+    // 启动动画
+    animationComponent_.triggerLanding(0.5 * (data.Moved.y + data.Remaining.y) / deltaTime / MaxFall);
 }
 
 void Player::handleCeilingCollision(const CollisionData &data) {
@@ -810,6 +827,6 @@ void Player::render(sf::RenderWindow &window) {
     else
         player_.setFillColor(Used);
     trailEffectManager_.render(window);
-    window.draw(player_);
+    window.draw(animationComponent_.applyTransform(player_));
     particleEmitter_.render(window);
 }

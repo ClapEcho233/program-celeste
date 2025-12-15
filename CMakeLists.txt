@@ -28,6 +28,8 @@ add_executable(celeste src/main.cpp
         src/Render/TrailEffect.h
         src/Render/Particle.cpp
         src/Render/Particle.h
+        src/Player/AnimationComponent.cpp
+        src/Player/AnimationComponent.h
 )
 
 # 设置SFML为静态链接

@@ -43,8 +43,9 @@ void Particle::update() {
 }
 
 void Particle::render(sf::RenderWindow &window) {
-    dot_.setPosition({static_cast<float>(std::round(position_.x / 10.0) * 10.0),
-                         static_cast<float>(std::round(position_.y / 10.0) * 10.0)});
+    // dot_.setPosition({static_cast<float>(std::round(position_.x / 10.0) * 10.0),
+    //                      static_cast<float>(std::round(position_.y / 10.0) * 10.0)});
+    dot_.setPosition(position_);
     dot_.setFillColor(color_);
     window.draw(dot_);
 }

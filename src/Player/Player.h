@@ -10,6 +10,7 @@
 #include "../Input/Input.h"
 #include "../Render/TrailEffect.h"
 #include "../Render/Particle.h"
+#include "AnimationComponent.h"
 #include "StateMachine.h"
 #include <iostream>
 #include <cmath>
@@ -22,8 +23,6 @@ class Player : public IRenderable {
 private:
     static constexpr float MaxFall = 1600;                           // 最大下落速度
     static constexpr float Gravity = 9000;                           // 重力加速度 (像素/秒²)
-    static constexpr float FastMaxFall = 2400;                       // 快速下落最大速度
-    static constexpr float FastMaxAccel = 3000;                      // 快速下落加速度
     static constexpr float HalfGravThreshold = 400;                  // 半重力阈值速度
 
     static constexpr float MaxRun = 900;                             // 最大跑步速度
@@ -105,7 +104,7 @@ private:
     StateMachine stateMachine_;
     TrailEffectManager trailEffectManager_; // 残影控制器
     ParticleEmitter particleEmitter_; // 粒子发射器
-
+    AnimationComponent animationComponent_; // 动画控制器
 
     // 状态
 
