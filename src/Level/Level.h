@@ -14,41 +14,31 @@ enum class EType {Platform, JumpThru, Hurt};
 
 using json = nlohmann::json;
 
-/* 单个关卡 json 结构例子：
-{
-    "Platform": [
-        {
-            "width": 10,
-            "height": 10,
-            "x": 10,
-            "y": 10
-        },
-        ...
-    ],
-    "JumpThru": [
-        ...
-    ],
-    "Hurt":[
-        ...
-    ],
-    "position": {
-        "x": 10,
-        "y": 10
-    }
-}
+/**
+ * 单个关卡 json 结构示例
+ * {
+ *   "Platform": [
+ *     {"width": 10, "height": 10, "x": 10, "y": 10},
+ *     ...
+ *   ],
+ *   "JumpThru": [...],
+ *   "Hurt": [...],
+ *   "position": {"x": 10, "y": 10},     // 玩家初始位置
+ *   "bounds": {                         // 可选：显式设置地图世界边界
+ *     "x": 0, "y": 0, "width": 3200, "height": 1800
+ *   }
+ * }
  */
-
 class Entity : public IRenderable {
 private:
     sf::RectangleShape entity_;
     EType type_;
     bool safe_;
 
-
 public:
     Entity(EType type, sf::Vector2f size, sf::Vector2f position, bool safe);
 
-    sf::RectangleShape getEntity();
+    sf::RectangleShape getEntity() const;
 
     EType getType() const;
 
@@ -63,22 +53,30 @@ private:
     std::vector<Entity> hurt_;
     std::vector<Entity> jumpThru_;
     sf::Vector2f position_;
+    sf::FloatRect bounds_;
 
 public:
     /**
-     * 构造函数，内有解析游戏关卡配置
-     * @param configs 游戏关卡的 json
+     * 构造函数，内部解析关卡配置
+     * @param configs 关卡 json
      */
     Level(json configs);
 
     /**
-     * 检测碰撞
-     * @param player 待检测对象的碰撞箱
+     * 碰撞检测
+     * @param player 玩家碰撞箱
      * @return 碰撞到的实体，unsafe 在前
      */
     std::vector<Entity> collision(sf::FloatRect player);
 
     sf::Vector2f getPosition() const;
+
+    /**
+     * 获取关卡边界，用于限制镜头移动范围。
+     * 优先使用配置中的 bounds；缺省则回退到实体包围盒。
+     * @return 世界坐标系下的边界矩形
+     */
+    sf::FloatRect getBounds() const;
 
     void render(sf::RenderWindow &window) override;
 };
@@ -96,7 +94,7 @@ public:
 
     void setLevelId(int levelId);
 
-    Level getLevel();
+    const Level& getLevel() const;
 
     void render(sf::RenderWindow &window) override;
 };

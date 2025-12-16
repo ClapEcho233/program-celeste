@@ -14,7 +14,7 @@
 
 class Game {
 private:
-    static constexpr float ShakeDeltaTime = 0.01; // 震动时间间隔
+    static constexpr float ShakeDeltaTime = 0.01; // 震动间隔
     static constexpr float ShakeNumber = 4;       // 震动次数
     static constexpr float ShakePixel = 10;       // 震动幅度（像素）
 
@@ -27,6 +27,13 @@ private:
     Player* player_;
     float deltaTime_;
 
+    sf::Vector2f cameraPos_;       // 当前镜头中心（平滑后）
+    sf::Vector2f cameraTarget_;    // 目标镜头中心（未平滑）
+    sf::Vector2f shakeOffset_;     // 镜头震动偏移
+    bool followPlayerX_;           // 是否锚定玩家 X
+    bool followPlayerY_;           // 是否锚定玩家 Y
+    float cameraFollowSpeed_;      // 镜头跟随平滑速度
+
     sf::Vector2f shakeDir_; // 震动方向
     float shakeSign_;       // 标志
     float shakeNumber_;     // 剩余震动次数
@@ -36,13 +43,12 @@ public:
     Game();
 
     /**
-     * @return 是否正在运行
+     * @return 是否仍在运行
      */
     bool isRunning() const;
 
     /**
-     * 初始化游戏引擎
-     * 更新 deltaTime
+     * 初始化游戏引擎，更新 deltaTime
      */
     void initialize();
     void processEvent();
@@ -52,17 +58,11 @@ public:
 
     void screenShake(sf::Vector2f dir); // 屏幕震动
     void shakeUpdate();
+    void updateCamera(bool instant = false);
+    void setCameraFollow(bool followX, bool followY);
 
 private:
-    /**
-     * 关闭窗口事件处理
-     */
     void handleEvent(const sf::Event::Closed&);
-
-    /**
-     * 改变窗口尺寸事件处理
-     * @param resized 改变后窗口对象
-     */
     void handleEvent(const sf::Event::Resized &resized);
     void handleEvent(const auto &) {}
 };

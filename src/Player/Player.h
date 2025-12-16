@@ -151,6 +151,8 @@ public:
 
     void render(sf::RenderWindow &window) override;
 
+    sf::Vector2f getPosition() const;
+
 private:
     // 状态回调函数
     void setupStateCallbacks();

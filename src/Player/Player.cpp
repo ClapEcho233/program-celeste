@@ -830,3 +830,7 @@ void Player::render(sf::RenderWindow &window) {
     window.draw(animationComponent_.applyTransform(player_));
     particleEmitter_.render(window);
 }
+
+sf::Vector2f Player::getPosition() const {
+    return player_.getPosition();
+}

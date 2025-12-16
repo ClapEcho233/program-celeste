@@ -3,6 +3,7 @@
 //
 
 #include "Level.h"
+#include <limits>
 
 Entity::Entity(EType type, sf::Vector2f size, sf::Vector2f position, bool safe)
     : type_(type), safe_(safe) {
@@ -28,7 +29,7 @@ Entity::Entity(EType type, sf::Vector2f size, sf::Vector2f position, bool safe)
     entity_.setPosition(position);
 }
 
-sf::RectangleShape Entity::getEntity() {
+sf::RectangleShape Entity::getEntity() const {
     return entity_;
 }
 
@@ -48,20 +49,63 @@ Level::Level(json configs) {
     // if (configs.is_object() == false) throw std::invalid_argument("The configs is not valid.");
 
     // lambda 复用代码
-    auto work = [this, &configs](std::string name, EType type) -> void {
+    auto work = [&configs](std::string name, EType type, std::vector<Entity>& target) -> void {
         for (const auto& config : configs.at(name)) {
-            platform_.emplace_back(type,
+            target.emplace_back(type,
                 sf::Vector2f{config.at("width"), config.at("height")},
                 sf::Vector2f{config.at("x"), config.at("y")},
                 true);
         }
     };
 
-    work("Platform", EType::Platform);
-    work("JumpThru", EType::JumpThru);
-    work("Hurt", EType::Hurt);
+    work("Platform", EType::Platform, platform_);
+    work("JumpThru", EType::JumpThru, jumpThru_);
+    work("Hurt", EType::Hurt, hurt_);
 
     position_ = sf::Vector2f{configs.at("position").at("x"), configs.at("position").at("y")};
+
+    // 计算地图边界，方便镜头限制
+    if (configs.contains("bounds")) {
+        const auto& bounds = configs.at("bounds");
+        // 显式设置世界边界（优先级最高）
+        bounds_ = sf::FloatRect(
+            sf::Vector2f{bounds.at("x"), bounds.at("y")},
+            sf::Vector2f{bounds.at("width"), bounds.at("height")}
+        );
+        return;
+    }
+
+    bool hasEntity = false;
+    float minX = std::numeric_limits<float>::max();
+    float minY = std::numeric_limits<float>::max();
+    float maxX = std::numeric_limits<float>::lowest();
+    float maxY = std::numeric_limits<float>::lowest();
+
+    auto expand = [&](const Entity& entity) {
+        hasEntity = true;
+        // SFML3 的 FloatRect 使用 position/size 字段
+        sf::FloatRect rect = entity.getEntity().getGlobalBounds();
+        minX = std::min(minX, rect.position.x);
+        minY = std::min(minY, rect.position.y);
+        maxX = std::max(maxX, rect.position.x + rect.size.x);
+        maxY = std::max(maxY, rect.position.y + rect.size.y);
+    };
+
+    auto applyExpand = [&](const std::vector<Entity>& list) {
+        for (const auto& entity : list) {
+            expand(entity);
+        }
+    };
+
+    applyExpand(platform_);
+    applyExpand(jumpThru_);
+    applyExpand(hurt_);
+
+    if (hasEntity) {
+        bounds_ = sf::FloatRect({minX, minY}, {maxX - minX, maxY - minY});
+    } else {
+        bounds_ = sf::FloatRect();
+    }
 }
 
 std::vector<Entity> Level::collision(sf::FloatRect player) {
@@ -85,6 +129,10 @@ std::vector<Entity> Level::collision(sf::FloatRect player) {
 
 sf::Vector2f Level::getPosition() const {
     return position_;
+}
+
+sf::FloatRect Level::getBounds() const {
+    return bounds_;
 }
 
 void Level::render(sf::RenderWindow &window) {
@@ -131,7 +179,7 @@ int LevelManager::getLevelId() {
     return levelId_;
 }
 
-Level LevelManager::getLevel() {
+const Level& LevelManager::getLevel() const {
     return levels_.at(levelId_);
 }
 
