@@ -26,6 +26,7 @@ Player::Player(Level nowLevel, std::function<void(sf::Vector2f)> shake) :
     wallBoostTimer = 0;
     climbJumpProtectionTimer = 0;
     dashRefillCooldownTimer = 0;
+    wallSlideDir = 0;
 
     // 设置回调
     shakeCallback = shake;
@@ -450,7 +451,7 @@ std::vector<Entity> Player::checkNextCollide(sf::Vector2f unit) {
     auto size = player_.getGlobalBounds().size;
 
     // 检测碰撞
-    return nowlevel_.collision(sf::FloatRect(position + unit, size));
+    return nowlevel_.collision(sf::FloatRect(position + unit, size), speed);
 }
 
 void Player::jump(bool particle) {
@@ -655,56 +656,48 @@ bool Player::moveVExact(int v) {
 }
 
 void Player::onCollideH(const CollisionData& data) {
-    if (data.Hit.getType() == EType::Platform) { // 如果为平台（不可穿过），就停止
-        int hitDirection = std::copysign(1.0, data.Direction.x);
+    int hitDirection = std::copysign(1.0, data.Direction.x);
 
-        // 高速水平墙角修正
-        if (horizontalCornerCorrection()) {
-            moveH(data.Remaining.x);
-            return ;
-        }
-
-        // 处理不同方向碰撞
-        if (hitDirection > 0) {
-            handleRightWallCollision(data);
-        } else {
-            handleLeftWallCollision(data);
-        }
-
-        speed.x = 0;
-        dashAttackTimer = 0;
-    } else {
+    // 高速水平墙角修正
+    if (horizontalCornerCorrection()) {
         moveH(data.Remaining.x);
+        return ;
     }
+
+    // 处理不同方向碰撞
+    if (hitDirection > 0) {
+        handleRightWallCollision(data);
+    } else {
+        handleLeftWallCollision(data);
+    }
+
+    speed.x = 0;
+    dashAttackTimer = 0;
 }
 
 void Player::onCollideV(const CollisionData& data) {
-    if (data.Hit.getType() == EType::Platform) { // 如果为平台（不可穿过），就停止
-        int hitDirection = std::copysign(1.0, data.Direction.y);
+    int hitDirection = std::copysign(1.0, data.Direction.y);
 
-        // 向上墙角修正
-        if (upwardCornerCorrection()) {
-            moveV(data.Remaining.y);
-            return ;
-        }
-        // 冲刺向下墙角修正
-        if (dashDownCornerCorrection()) {
-            moveV(data.Remaining.y);
-            return ;
-        }
+    // 向上墙角修正
+    if (upwardCornerCorrection()) {
+        moveV(data.Remaining.y);
+        return ;
+    }
+    // 冲刺向下墙角修正
+    if (dashDownCornerCorrection()) {
+        moveV(data.Remaining.y);
+        return ;
+    }
 
         // 处理不同方向碰撞
-        if (hitDirection > 0) {
-            handleGroundCollision(data);
-        } else {
-            handleCeilingCollision(data);
-        }
-
-        speed.y = 0;
-        dashAttackTimer = 0;
+    if (hitDirection > 0) {
+        handleGroundCollision(data);
     } else {
-        moveV(data.Remaining.y);
+        handleCeilingCollision(data);
     }
+
+    speed.y = 0;
+    dashAttackTimer = 0;
 }
 
 void Player::handleLeftWallCollision(const CollisionData &data) {

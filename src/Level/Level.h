@@ -37,13 +37,10 @@ private:
 
 public:
     Entity(EType type, sf::Vector2f size, sf::Vector2f position, bool safe);
-
-    sf::RectangleShape getEntity() const;
-
-    EType getType() const;
-
-    bool getSafe();
-
+    sf::RectangleShape getEntity() const; // 获取平台对象
+    EType getType() const; // 获取平台类型
+    bool getSafe() const; // 平台是否安全
+    Entity setType(EType type); // 改变平台类型
     void render(sf::RenderWindow &window) override;
 };
 
@@ -67,7 +64,8 @@ public:
      * @param player 玩家碰撞箱
      * @return 碰撞到的实体，unsafe 在前
      */
-    std::vector<Entity> collision(sf::FloatRect player);
+    std::vector<Entity> collision(sf::FloatRect player, sf::Vector2f speed);
+    bool jumpThruCheck(sf::FloatRect player, Entity entity); // 单向板穿越检测
 
     sf::Vector2f getPosition() const;
 

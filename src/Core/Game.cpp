@@ -55,8 +55,8 @@ void Game::render() {
     renderer_.applyView(window_);
 
     line_.render(window_);
-    player_->render(window_);
     levelManager_.render(window_);
+    player_->render(window_);
 
     window_.display();
 }

@@ -3,6 +3,8 @@
 //
 
 #include "Level.h"
+
+#include <iostream>
 #include <limits>
 
 Entity::Entity(EType type, sf::Vector2f size, sf::Vector2f position, bool safe)
@@ -33,12 +35,16 @@ sf::RectangleShape Entity::getEntity() const {
     return entity_;
 }
 
-EType Entity::getType() const{
+EType Entity::getType() const {
     return type_;
 }
 
-bool Entity::getSafe() {
+bool Entity::getSafe() const {
     return safe_;
+}
+
+Entity Entity::setType(EType type) {
+    return Entity(type, entity_.getSize(), entity_.getPosition(), safe_);
 }
 
 void Entity::render(sf::RenderWindow &window) {
@@ -108,14 +114,19 @@ Level::Level(json configs) {
     }
 }
 
-std::vector<Entity> Level::collision(sf::FloatRect player) {
+std::vector<Entity> Level::collision(sf::FloatRect player, sf::Vector2f speed) {
     std::vector<Entity> ret;
 
     // lambda 复用代码
-    auto work = [&player, &ret](std::vector<Entity> list) -> void {
+    auto work = [&player, &ret, this, speed](std::vector<Entity> list) -> void {
         for (auto entity : list) {
-            if (entity.getEntity().getGlobalBounds().findIntersection(player)) {
-                ret.push_back(entity);
+            if (entity.getType() != EType::JumpThru) {
+                if (entity.getEntity().getGlobalBounds().findIntersection(player))
+                    ret.push_back(entity);
+            } else {
+                if (jumpThruCheck (player, entity) && entity.getEntity().getGlobalBounds().findIntersection(player)
+                    && speed.y >= 0)
+                    ret.push_back(entity.setType(EType::Platform));
             }
         }
     };
@@ -125,6 +136,11 @@ std::vector<Entity> Level::collision(sf::FloatRect player) {
     work(platform_);
 
     return ret;
+}
+
+bool Level::jumpThruCheck(sf::FloatRect player, Entity entity) {
+    return player.position.y + player.size.y - 1 <=
+        entity.getEntity().getPosition().y - entity.getEntity().getSize().y / 2;
 }
 
 sf::Vector2f Level::getPosition() const {
