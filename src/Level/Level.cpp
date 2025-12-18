@@ -6,15 +6,13 @@
 
 #include <iostream>
 #include <limits>
+#include <optional>
 
 Entity::Entity(EType type, sf::Vector2f size, sf::Vector2f position, bool safe)
     : type_(type), safe_(safe) {
-    // 设置实体的大小
     entity_.setSize(size);
-
     entity_.setOrigin({entity_.getSize().x / 2, entity_.getSize().y / 2});
 
-    // 根据类型设置不同颜色
     switch(type_) {
         case EType::Platform:
             entity_.setFillColor(sf::Color::Cyan);
@@ -27,7 +25,6 @@ Entity::Entity(EType type, sf::Vector2f size, sf::Vector2f position, bool safe)
             break;
     }
 
-    // 设置位置
     entity_.setPosition(position);
 }
 
@@ -52,15 +49,22 @@ void Entity::render(sf::RenderWindow &window) {
 }
 
 Level::Level(json configs) {
+    offset_ = sf::Vector2f{0, 0};
+    if (configs.contains("offset")) {
+        offset_.x = configs.at("offset").value("x", 0.0f);
+        offset_.y = configs.at("offset").value("y", 0.0f);
+    }
+
     // if (configs.is_object() == false) throw std::invalid_argument("The configs is not valid.");
 
-    // lambda 复用代码
-    auto work = [&configs](std::string name, EType type, std::vector<Entity>& target) -> void {
+    auto work = [this, &configs](std::string name, EType type, std::vector<Entity>& target) -> void {
         for (const auto& config : configs.at(name)) {
-            target.emplace_back(type,
+            target.emplace_back(
+                type,
                 sf::Vector2f{config.at("width"), config.at("height")},
-                sf::Vector2f{config.at("x"), config.at("y")},
-                true);
+                sf::Vector2f{config.at("x"), config.at("y")} + offset_,
+                true
+            );
         }
     };
 
@@ -69,13 +73,25 @@ Level::Level(json configs) {
     work("Hurt", EType::Hurt, hurt_);
 
     position_ = sf::Vector2f{configs.at("position").at("x"), configs.at("position").at("y")};
+    position_ += offset_;
+
+    if (configs.contains("transitions")) {
+        for (const auto& transition : configs.at("transitions")) {
+            transitions_.push_back(Transition{
+                transition.at("to"),
+                sf::FloatRect(
+                    sf::Vector2f{transition.at("x"), transition.at("y")} + offset_,
+                    sf::Vector2f{transition.at("width"), transition.at("height")}
+                )
+            });
+        }
+    }
 
     // 计算地图边界，方便镜头限制
     if (configs.contains("bounds")) {
         const auto& bounds = configs.at("bounds");
-        // 显式设置世界边界（优先级最高）
         bounds_ = sf::FloatRect(
-            sf::Vector2f{bounds.at("x"), bounds.at("y")},
+            sf::Vector2f{bounds.at("x"), bounds.at("y")} + offset_,
             sf::Vector2f{bounds.at("width"), bounds.at("height")}
         );
         return;
@@ -89,7 +105,6 @@ Level::Level(json configs) {
 
     auto expand = [&](const Entity& entity) {
         hasEntity = true;
-        // SFML3 的 FloatRect 使用 position/size 字段
         sf::FloatRect rect = entity.getEntity().getGlobalBounds();
         minX = std::min(minX, rect.position.x);
         minY = std::min(minY, rect.position.y);
@@ -114,10 +129,9 @@ Level::Level(json configs) {
     }
 }
 
-std::vector<Entity> Level::collision(sf::FloatRect player, sf::Vector2f speed) {
+std::vector<Entity> Level::collision(sf::FloatRect player, sf::Vector2f speed) const {
     std::vector<Entity> ret;
 
-    // lambda 复用代码
     auto work = [&player, &ret, this, speed](std::vector<Entity> list) -> void {
         for (auto entity : list) {
             if (entity.getType() != EType::JumpThru) {
@@ -138,7 +152,7 @@ std::vector<Entity> Level::collision(sf::FloatRect player, sf::Vector2f speed) {
     return ret;
 }
 
-bool Level::jumpThruCheck(sf::FloatRect player, Entity entity) {
+bool Level::jumpThruCheck(sf::FloatRect player, Entity entity) const {
     return player.position.y + player.size.y - 1 <=
         entity.getEntity().getPosition().y - entity.getEntity().getSize().y / 2;
 }
@@ -151,8 +165,15 @@ sf::FloatRect Level::getBounds() const {
     return bounds_;
 }
 
+const std::vector<Level::Transition>& Level::getTransitions() const {
+    return transitions_;
+}
+
+sf::Vector2f Level::getOffset() const {
+    return offset_;
+}
+
 void Level::render(sf::RenderWindow &window) {
-    // lambda 复用代码
     auto work = [&window](std::vector<Entity> list) -> void {
         for (auto entity : list) {
             entity.render(window);
@@ -165,9 +186,7 @@ void Level::render(sf::RenderWindow &window) {
 }
 
 LevelManager::LevelManager() : levelId_(0) {
-    // 打开关卡配置文件
     FILE *fp = fopen("assets/LevelConfigs.json", "r");
-    // 检查文件是否成功打开
     if (!fp) throw std::runtime_error("Could not open LevelConfigs.json");
 
     std::string file;
@@ -175,12 +194,9 @@ LevelManager::LevelManager() : levelId_(0) {
         file.push_back(fgetc(fp));
     }
 
-    // 把最后一个 EOF 去掉
     file.pop_back();
-    // 关闭文件，释放资源
     fclose(fp);
 
-    // 解析 json
     configs_=json::parse(file);
     for (auto config : configs_) {
         levels_.emplace_back(config);
@@ -188,7 +204,8 @@ LevelManager::LevelManager() : levelId_(0) {
 }
 
 void LevelManager::setLevelId(int levelId) {
-    levelId_ = levelId;
+    if (levelId >= 0 && levelId < getLevelCount())
+        levelId_ = levelId;
 }
 
 int LevelManager::getLevelId() {
@@ -199,8 +216,23 @@ const Level& LevelManager::getLevel() const {
     return levels_.at(levelId_);
 }
 
+const Level& LevelManager::getLevelById(int id) const {
+    return levels_.at(id);
+}
+
+int LevelManager::getLevelCount() const {
+    return static_cast<int>(levels_.size());
+}
+
 void LevelManager::render(sf::RenderWindow &window) {
-    for (auto level : levels_) {
-        level.render(window);
+    render(window, std::nullopt);
+}
+
+void LevelManager::render(sf::RenderWindow &window, std::optional<int> extraLevelId) {
+    levels_.at(levelId_).render(window);
+    if (extraLevelId.has_value() && extraLevelId.value() >= 0 && extraLevelId.value() < getLevelCount()) {
+        if (extraLevelId.value() != levelId_) {
+            levels_.at(extraLevelId.value()).render(window);
+        }
     }
 }

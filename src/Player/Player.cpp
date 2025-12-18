@@ -4,8 +4,8 @@
 
 #include "Player.h"
 
-Player::Player(Level nowLevel, std::function<void(sf::Vector2f)> shake) :
-    nowlevel_(nowLevel){
+Player::Player(LevelManager& levelManager, std::function<void(sf::Vector2f)> shake) :
+    levelManager_(&levelManager){
     // 初始化状态回调函数
     setupStateCallbacks();
 
@@ -15,7 +15,7 @@ Player::Player(Level nowLevel, std::function<void(sf::Vector2f)> shake) :
     player_.setOutlineThickness(5);
     player_.setSize({80, 110});
     player_.setOrigin({40, 55});
-    player_.setPosition(nowLevel.getPosition());
+    player_.setPosition(levelManager_->getLevel().getPosition());
 
     jumpGraceTimer = 0;
     varJumpTimer = 0;
@@ -451,7 +451,7 @@ std::vector<Entity> Player::checkNextCollide(sf::Vector2f unit) {
     auto size = player_.getGlobalBounds().size;
 
     // 检测碰撞
-    return nowlevel_.collision(sf::FloatRect(position + unit, size), speed);
+    return levelManager_->getLevel().collision(sf::FloatRect(position + unit, size), speed);
 }
 
 void Player::jump(bool particle) {
@@ -826,4 +826,24 @@ void Player::render(sf::RenderWindow &window) {
 
 sf::Vector2f Player::getPosition() const {
     return player_.getPosition();
+}
+
+sf::FloatRect Player::getBounds() const {
+    return player_.getGlobalBounds();
+}
+
+void Player::setPosition(sf::Vector2f pos) {
+    player_.setPosition(pos);
+}
+
+sf::Vector2f Player::getSpeed() const {
+    return speed;
+}
+
+void Player::setSpeed(sf::Vector2f s) {
+    speed = s;
+}
+
+void Player::stopMovement() {
+    speed = {0, 0};
 }

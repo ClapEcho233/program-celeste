@@ -8,6 +8,7 @@
 #include "../Common/Renderable.h"
 #include "../Common/json.hpp"
 #include <vector>
+#include <optional>
 #include <stdio.h>
 
 enum class EType {Platform, JumpThru, Hurt};
@@ -45,11 +46,19 @@ public:
 };
 
 class Level: public IRenderable {
+public:
+    struct Transition {
+        int nextLevelId;
+        sf::FloatRect area;
+    };
+
 private:
     std::vector<Entity> platform_;
     std::vector<Entity> hurt_;
     std::vector<Entity> jumpThru_;
+    std::vector<Transition> transitions_;
     sf::Vector2f position_;
+    sf::Vector2f offset_;
     sf::FloatRect bounds_;
 
 public:
@@ -62,10 +71,11 @@ public:
     /**
      * 碰撞检测
      * @param player 玩家碰撞箱
+     * @param speed 碰撞时玩家速度
      * @return 碰撞到的实体，unsafe 在前
      */
-    std::vector<Entity> collision(sf::FloatRect player, sf::Vector2f speed);
-    bool jumpThruCheck(sf::FloatRect player, Entity entity); // 单向板穿越检测
+    std::vector<Entity> collision(sf::FloatRect player, sf::Vector2f speed) const;
+    bool jumpThruCheck(sf::FloatRect player, Entity entity) const; // 单向板穿越检测
 
     sf::Vector2f getPosition() const;
 
@@ -75,6 +85,9 @@ public:
      * @return 世界坐标系下的边界矩形
      */
     sf::FloatRect getBounds() const;
+
+    const std::vector<Transition>& getTransitions() const;
+    sf::Vector2f getOffset() const;
 
     void render(sf::RenderWindow &window) override;
 };
@@ -87,14 +100,13 @@ private:
 
 public:
     LevelManager();
-
     int getLevelId();
-
     void setLevelId(int levelId);
-
     const Level& getLevel() const;
-
+    const Level& getLevelById(int id) const;
+    int getLevelCount() const;
     void render(sf::RenderWindow &window) override;
+    void render(sf::RenderWindow &window, std::optional<int> extraLevelId);
 };
 
 #endif //CELESTE_LEVEL_H

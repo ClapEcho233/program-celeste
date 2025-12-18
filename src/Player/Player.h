@@ -99,7 +99,7 @@ private:
 private:
     // 对象
     sf::RectangleShape player_;
-    Level nowlevel_; // 当前关卡
+    LevelManager* levelManager_; // 当前关卡管理器（保持指针，便于切换关卡）
     Input input_; // 键盘交互
     StateMachine stateMachine_;
     TrailEffectManager trailEffectManager_; // 残影控制器
@@ -143,8 +143,7 @@ private:
     std::function<void(sf::Vector2f)> shakeCallback;
 
 public:
-
-    Player(Level nowLevel, std::function<void(sf::Vector2f)> shake);
+    Player(LevelManager& levelManager, std::function<void(sf::Vector2f)> shake);
     ~Player() override;
 
     void update();
@@ -152,6 +151,11 @@ public:
     void render(sf::RenderWindow &window) override;
 
     sf::Vector2f getPosition() const;
+    sf::FloatRect getBounds() const;
+    void setPosition(sf::Vector2f pos);
+    sf::Vector2f getSpeed() const;
+    void setSpeed(sf::Vector2f s);
+    void stopMovement();
 
 private:
     // 状态回调函数

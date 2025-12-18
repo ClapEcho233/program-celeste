@@ -17,6 +17,8 @@ private:
     static constexpr float ShakeDeltaTime = 0.01; // 震动间隔
     static constexpr float ShakeNumber = 4;       // 震动次数
     static constexpr float ShakePixel = 10;       // 震动幅度（像素）
+    static constexpr float TransitionHoldTime = 0.12;   // 转场暂停时间（缩短停顿）
+    static constexpr float TransitionBlendTime = 0.35;  // 转场镜头平滑时间（略快）
 
 private:
     sf::RenderWindow window_;
@@ -39,6 +41,18 @@ private:
     float shakeNumber_;     // 剩余震动次数
     float shakeDeltaTimer_; // 震动间隔计时器
 
+    bool transitioning_;          // 是否处于关卡切换
+    float transitionHoldTimer_;   // 暂停阶段计时
+    float transitionBlendTimer_;  // 镜头平滑阶段计时
+    int pendingLevelId_;          // 目标关卡 id
+    bool levelSwapped_;           // 是否已切换关卡
+    sf::Vector2f frozenCameraPos_; // 暂停阶段固定镜头位置
+    int previousLevelId_;         // 用于在转场时同时渲染上一关
+    sf::Vector2f transitionDir_;  // 当前转场方向（指向离开本关的方向）
+    sf::FloatRect currentTransitionArea_; // 触发转场的区域
+    sf::Vector2f preTransitionPlayerPos_; // 记录触发瞬间的玩家位置
+    sf::Vector2f preTransitionSpeed_;     // 记录触发瞬间的玩家速度
+
 public:
     Game();
 
@@ -60,6 +74,11 @@ public:
     void shakeUpdate();
     void updateCamera(bool instant = false);
     void setCameraFollow(bool followX, bool followY);
+    void checkLevelTransition();
+    void startLevelTransition(const Level::Transition& transition);
+    void updateLevelTransition();
+    sf::Vector2f determineTransitionDir(const Level& level, const Level::Transition& t) const;
+    void placePlayerInNextLevel();
 
 private:
     void handleEvent(const sf::Event::Closed&);

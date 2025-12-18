@@ -3,6 +3,7 @@
 //
 
 #include "Game.h"
+#include <algorithm>
 #include <cmath>
 
 Game::Game() :
@@ -19,13 +20,24 @@ Game::Game() :
     shakeDir_(0, 0),
     shakeSign_(0),
     shakeNumber_(0),
-    shakeDeltaTimer_(0)
+    shakeDeltaTimer_(0),
+    transitioning_(false),
+    transitionHoldTimer_(0),
+    transitionBlendTimer_(0),
+    pendingLevelId_(0),
+    levelSwapped_(false),
+    frozenCameraPos_(0, 0),
+    previousLevelId_(0),
+    transitionDir_(0, 0),
+    currentTransitionArea_({0, 0}, {0, 0}),
+    preTransitionPlayerPos_(0, 0),
+    preTransitionSpeed_(0, 0)
 {
     window_.setFramerateLimit(120);
     renderer_.handleResize(window_);
     renderer_.zoomCamera(1);
 
-    player_ = new Player(levelManager_.getLevel(), [this](sf::Vector2f dir) { screenShake(dir); });
+    player_ = new Player(levelManager_, [this](sf::Vector2f dir) { screenShake(dir); });
 
     cameraPos_ = player_->getPosition();
     cameraTarget_ = cameraPos_;
@@ -45,9 +57,15 @@ void Game::processEvent() {
 }
 
 void Game::update() {
+    if (transitioning_) {
+        updateLevelTransition();
+        return;
+    }
+
     player_->update();
     shakeUpdate();
     updateCamera();
+    checkLevelTransition();
 }
 
 void Game::render() {
@@ -55,7 +73,12 @@ void Game::render() {
     renderer_.applyView(window_);
 
     line_.render(window_);
-    levelManager_.render(window_);
+    if (transitioning_) {
+        int extra = levelSwapped_ ? previousLevelId_ : pendingLevelId_;
+        levelManager_.render(window_, extra);
+    } else {
+        levelManager_.render(window_);
+    }
     player_->render(window_);
 
     window_.display();
@@ -142,6 +165,123 @@ void Game::setCameraFollow(bool followX, bool followY) {
     followPlayerX_ = followX;
     followPlayerY_ = followY;
     updateCamera(true);
+}
+
+void Game::checkLevelTransition() {
+    const Level& level = levelManager_.getLevel();
+    sf::FloatRect playerBounds = player_->getBounds();
+
+    for (const auto& transition : level.getTransitions()) {
+        if (transition.area.findIntersection(playerBounds)) {
+            startLevelTransition(transition);
+            break;
+        }
+    }
+}
+
+void Game::startLevelTransition(const Level::Transition& transition) {
+    int nextLevelId = transition.nextLevelId;
+    if (transitioning_ || nextLevelId == levelManager_.getLevelId())
+        return;
+    if (nextLevelId < 0 || nextLevelId >= levelManager_.getLevelCount())
+        return;
+
+    transitioning_ = true;
+    previousLevelId_ = levelManager_.getLevelId();
+    pendingLevelId_ = nextLevelId;
+    transitionHoldTimer_ = TransitionHoldTime;
+    transitionBlendTimer_ = TransitionBlendTime;
+    levelSwapped_ = false;
+    frozenCameraPos_ = cameraPos_;
+    shakeNumber_ = 0;
+    shakeOffset_ = {0, 0};
+    preTransitionSpeed_ = player_->getSpeed();
+    player_->stopMovement();
+    currentTransitionArea_ = transition.area;
+    transitionDir_ = determineTransitionDir(levelManager_.getLevel(), transition);
+    preTransitionPlayerPos_ = player_->getPosition();
+}
+
+void Game::updateLevelTransition() {
+    if (transitionHoldTimer_ > 0) {
+        transitionHoldTimer_ -= deltaTime_;
+        renderer_.setCameraCenter(frozenCameraPos_);
+        return;
+    }
+
+    if (!levelSwapped_) {
+        levelManager_.setLevelId(pendingLevelId_);
+        levelSwapped_ = true;
+        placePlayerInNextLevel();
+    }
+
+    updateCamera(false);
+    transitionBlendTimer_ -= deltaTime_;
+    if (transitionBlendTimer_ <= 0) {
+        transitioning_ = false;
+    }
+}
+
+sf::Vector2f Game::determineTransitionDir(const Level& level, const Level::Transition& t) const {
+    sf::FloatRect bounds = level.getBounds();
+    float leftDist = std::abs(t.area.position.x - bounds.position.x);
+    float rightDist = std::abs(bounds.position.x + bounds.size.x - (t.area.position.x + t.area.size.x));
+    float topDist = std::abs(t.area.position.y - bounds.position.y);
+    float bottomDist = std::abs(bounds.position.y + bounds.size.y - (t.area.position.y + t.area.size.y));
+
+    float minDist = std::min(std::min(leftDist, rightDist), std::min(topDist, bottomDist));
+    if (minDist == leftDist) return {-1.f, 0.f};
+    if (minDist == rightDist) return {1.f, 0.f};
+    if (minDist == topDist) return {0.f, -1.f};
+    return {0.f, 1.f};
+}
+
+void Game::placePlayerInNextLevel() {
+    const Level& nextLevel = levelManager_.getLevel();
+    sf::FloatRect nextBounds = nextLevel.getBounds();
+    sf::Vector2f playerSize = player_->getBounds().size;
+    float halfW = playerSize.x * 0.5f;
+    float halfH = playerSize.y * 0.5f;
+    const float margin = 12.0f; // 保证出生点离开触发区域且位移更小
+
+    // 找到下一关中指向上一关的过渡区域，方便贴合边界
+    const auto& transitions = nextLevel.getTransitions();
+    const Level::Transition* backTransition = nullptr;
+    for (const auto& t : transitions) {
+        if (t.nextLevelId == previousLevelId_) {
+            backTransition = &t;
+            break;
+        }
+    }
+
+    // 基于方向选择一个合适的落点（在边界内侧），保持另一轴的感知不变
+    auto clampAxis = [](float v, float min, float max) {
+        return std::max(min, std::min(max, v));
+    };
+
+    sf::Vector2f target = preTransitionPlayerPos_;
+    auto anchor = backTransition ? backTransition->area : currentTransitionArea_;
+
+    if (transitionDir_.x > 0) { // 从左往右出关，落点放在下一关左侧边界内侧
+        float x = (backTransition ? anchor.position.x + anchor.size.x : nextBounds.position.x) + halfW + margin;
+        float y = clampAxis(preTransitionPlayerPos_.y, nextBounds.position.y + halfH, nextBounds.position.y + nextBounds.size.y - halfH);
+        target = {x, y};
+    } else if (transitionDir_.x < 0) { // 从右往左
+        float x = (backTransition ? anchor.position.x : nextBounds.position.x + nextBounds.size.x) - halfW - margin;
+        float y = clampAxis(preTransitionPlayerPos_.y, nextBounds.position.y + halfH, nextBounds.position.y + nextBounds.size.y - halfH);
+        target = {x, y};
+    } else if (transitionDir_.y > 0) { // 从上往下
+        float y = (backTransition ? anchor.position.y + anchor.size.y : nextBounds.position.y) + halfH + margin;
+        float x = clampAxis(preTransitionPlayerPos_.x, nextBounds.position.x + halfW, nextBounds.position.x + nextBounds.size.x - halfW);
+        target = {x, y};
+    } else if (transitionDir_.y < 0) { // 从下往上
+        float y = (backTransition ? anchor.position.y : nextBounds.position.y + nextBounds.size.y) - halfH - margin;
+        float x = clampAxis(preTransitionPlayerPos_.x, nextBounds.position.x + halfW, nextBounds.position.x + nextBounds.size.x - halfW);
+        target = {x, y};
+    }
+
+    player_->setPosition(target);
+    player_->setSpeed(preTransitionSpeed_);
 }
 
 void Game::handleEvent(const sf::Event::Closed &) {
