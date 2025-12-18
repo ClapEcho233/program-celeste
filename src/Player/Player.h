@@ -156,6 +156,7 @@ public:
     sf::Vector2f getSpeed() const;
     void setSpeed(sf::Vector2f s);
     void stopMovement();
+    void resumeDash();
 
 private:
     // 状态回调函数

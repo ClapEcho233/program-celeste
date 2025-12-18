@@ -58,6 +58,7 @@ void Game::processEvent() {
 
 void Game::update() {
     if (transitioning_) {
+        // 转场期间只驱动关卡切换逻辑，暂停常规更新链
         updateLevelTransition();
         return;
     }
@@ -74,6 +75,7 @@ void Game::render() {
 
     line_.render(window_);
     if (transitioning_) {
+        // 转场时需要叠绘前后关卡，避免切场闪烁
         int extra = levelSwapped_ ? previousLevelId_ : pendingLevelId_;
         levelManager_.render(window_, extra);
     } else {
@@ -89,6 +91,7 @@ float Game::getDeltaTime() const {
 }
 
 void Game::screenShake(sf::Vector2f dir) {
+    // 初始化震屏参数并立即将视口偏移到第一帧
     shakeNumber_ = ShakeNumber;
     shakeDeltaTimer_ = 0;
     shakeDir_ = dir;
@@ -108,6 +111,7 @@ void Game::shakeUpdate() {
     } else {
         shakeNumber_ -= 1;
         shakeDeltaTimer_ = ShakeDeltaTime;
+        // 间隔时间到后切换偏移方向，模拟抖动
         shakeOffset_ += static_cast<float>(2.0 * shakeSign_ * ShakePixel) * shakeDir_;
         shakeSign_ = -shakeSign_;
     }
@@ -219,6 +223,7 @@ void Game::updateLevelTransition() {
     transitionBlendTimer_ -= deltaTime_;
     if (transitionBlendTimer_ <= 0) {
         transitioning_ = false;
+        player_ -> resumeDash(); // 切面回复冲刺
     }
 }
 

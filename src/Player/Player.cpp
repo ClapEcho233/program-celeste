@@ -406,7 +406,7 @@ void Player::groundCheck(bool replyDash) {
         onGround = false;
     } else {
         onGround = true;
-        if (replyDash) dashes = MaxDashes;
+        if (replyDash) resumeDash();
     }
 }
 
@@ -501,7 +501,7 @@ void Player::superJump() {
 
     // 回复冲刺次数
     if (dashRefillCooldownTimer <= 0)
-        dashes = MaxDashes;
+        resumeDash();
 
     // 发射粒子
     particleEmitter_.emitLandingDust(player_.getPosition() + sf::Vector2f(0, 55),
@@ -846,4 +846,8 @@ void Player::setSpeed(sf::Vector2f s) {
 
 void Player::stopMovement() {
     speed = {0, 0};
+}
+
+void Player::resumeDash() {
+    dashes = MaxDashes;
 }

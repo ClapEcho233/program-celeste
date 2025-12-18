@@ -17,8 +17,8 @@ private:
     static constexpr float ShakeDeltaTime = 0.01; // 震动间隔
     static constexpr float ShakeNumber = 4;       // 震动次数
     static constexpr float ShakePixel = 10;       // 震动幅度（像素）
-    static constexpr float TransitionHoldTime = 0.12;   // 转场暂停时间（缩短停顿）
-    static constexpr float TransitionBlendTime = 0.35;  // 转场镜头平滑时间（略快）
+    static constexpr float TransitionHoldTime = 0.1;   // 转场暂停时间
+    static constexpr float TransitionBlendTime = 0.65;  // 转场镜头平滑时间
 
 private:
     sf::RenderWindow window_;
