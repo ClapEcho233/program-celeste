@@ -266,4 +266,56 @@ void ParticleEmitter::emitDashLaunch(const sf::Vector2f &position, const sf::Vec
         );
 }
 
+void ParticleEmitter::emitDead(const sf::Vector2f &position, const sf::Color& insideColor) {
+    // 初始化随机
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_real_distribution<float> angleDist(-60.0, 60.0); // 角度扩散
+    std::uniform_real_distribution<float> speedDist(80.0, 120.0); // 速度基于强度
+
+    for (int i = -1; i <= 8; i++) {
+        for (int j = -1; j <= 11; ++ j) {
+            // 随机角度（转换为弧度）
+            float angle = angleDist(gen) * std::numbers::pi / 180.0f;
+
+            // 设置位置
+            sf::Vector2f nowPositon = position - sf::Vector2f(40, 55);
+            nowPositon.x = nowPositon.x + i * 10;
+            nowPositon.y = nowPositon.y + j * 10;
+
+            // 计算速度方向（向上扇形）
+            float speed = speedDist(gen);
+            sf::Vector2f velocity(
+                std::sin(angle) * speed,
+                -std::abs(std::cos(angle)) * speed // 主要向上
+            );
+
+            // 粒子尺寸
+            float size = 10;
+            sf::Vector2f particleSize(size, size);
+
+            float drag = 10.0f + randomFloat(gen) * 20.0f;
+            float stayTime = 0.4f + randomFloat(gen) * 0.4f;
+            float fadeTime = 0.2f + randomFloat(gen) * 0.2f;
+
+            // 设置颜色
+            sf::Color color;
+            if (i == -1 || i == 8 || j == -1 || j == 11)
+                color = Dust;
+            else
+                color = insideColor;
+
+            particles_.emplace_back(
+                nowPositon,
+                particleSize,
+                velocity,
+                color,
+                drag,
+                stayTime,
+                fadeTime
+            );
+        }
+    }
+}
+
 

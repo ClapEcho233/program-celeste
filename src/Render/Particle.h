@@ -89,6 +89,7 @@ public:
     void emitDashBurst(const sf::Vector2f& position, float intensity);          // 冲刺原地爆炸粒子
     void emitDashLaunch(const sf::Vector2f& position, const sf::Vector2f& dir); // 冲刺残留粒子
 
+    void emitDead(const sf::Vector2f& position, const sf::Color& insideColor); // 死亡粒子
 };
 
 

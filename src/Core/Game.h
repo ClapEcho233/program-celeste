@@ -17,8 +17,12 @@ private:
     static constexpr float ShakeDeltaTime = 0.01; // 震动间隔
     static constexpr float ShakeNumber = 4;       // 震动次数
     static constexpr float ShakePixel = 10;       // 震动幅度（像素）
-    static constexpr float TransitionHoldTime = 0.1;   // 转场暂停时间
+    static constexpr float TransitionHoldTime = 0.2;   // 转场暂停时间
     static constexpr float TransitionBlendTime = 0.65;  // 转场镜头平滑时间
+    static constexpr float DeadWaitTime = 1;
+
+    const sf::Color Normal = sf::Color(172, 50, 50);
+    const sf::Color Used = sf::Color(68, 183, 255);
 
 private:
     sf::RenderWindow window_;
@@ -40,6 +44,8 @@ private:
     float shakeSign_;       // 标志
     float shakeNumber_;     // 剩余震动次数
     float shakeDeltaTimer_; // 震动间隔计时器
+
+    float deadWaitTimer_; // 死亡等待时间计时器
 
     bool transitioning_;          // 是否处于关卡切换
     float transitionHoldTimer_;   // 暂停阶段计时
@@ -79,6 +85,7 @@ public:
     void updateLevelTransition();
     sf::Vector2f determineTransitionDir(const Level& level, const Level::Transition& t) const;
     void placePlayerInNextLevel();
+    void deadReset(); // 玩家死亡重置
 
 private:
     void handleEvent(const sf::Event::Closed&);

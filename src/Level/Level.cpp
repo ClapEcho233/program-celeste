@@ -57,20 +57,20 @@ Level::Level(json configs) {
 
     // if (configs.is_object() == false) throw std::invalid_argument("The configs is not valid.");
 
-    auto work = [this, &configs](std::string name, EType type, std::vector<Entity>& target) -> void {
+    auto work = [this, &configs](std::string name, EType type, std::vector<Entity>& target, bool isSafe) -> void {
         for (const auto& config : configs.at(name)) {
             target.emplace_back(
                 type,
                 sf::Vector2f{config.at("width"), config.at("height")},
                 sf::Vector2f{config.at("x"), config.at("y")} + offset_,
-                true
+                isSafe
             );
         }
     };
 
-    work("Platform", EType::Platform, platform_);
-    work("JumpThru", EType::JumpThru, jumpThru_);
-    work("Hurt", EType::Hurt, hurt_);
+    work("Platform", EType::Platform, platform_, true);
+    work("JumpThru", EType::JumpThru, jumpThru_, true);
+    work("Hurt", EType::Hurt, hurt_, false);
 
     position_ = sf::Vector2f{configs.at("position").at("x"), configs.at("position").at("y")};
     position_ += offset_;

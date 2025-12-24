@@ -21,6 +21,7 @@ Game::Game() :
     shakeSign_(0),
     shakeNumber_(0),
     shakeDeltaTimer_(0),
+    deadWaitTimer_(0),
     transitioning_(false),
     transitionHoldTimer_(0),
     transitionBlendTimer_(0),
@@ -57,6 +58,14 @@ void Game::processEvent() {
 }
 
 void Game::update() {
+    if (! player_ -> isAlive()) {
+        if (deadWaitTimer_ <= 0) {
+            deadWaitTimer_ = DeadWaitTime; // 初始化计时器
+            player_ -> getParticleEmitter()->emitDead(player_ -> getPosition(),
+                player_ -> getDashes() > 0 ? Normal : Used);
+        }
+        deadReset();
+    }
     if (transitioning_) {
         // 转场期间只驱动关卡切换逻辑，暂停常规更新链
         updateLevelTransition();
@@ -247,7 +256,7 @@ void Game::placePlayerInNextLevel() {
     sf::Vector2f playerSize = player_->getBounds().size;
     float halfW = playerSize.x * 0.5f;
     float halfH = playerSize.y * 0.5f;
-    const float margin = 12.0f; // 保证出生点离开触发区域且位移更小
+    const float margin = 5.0f; // 保证出生点离开触发区域且位移更小
 
     // 找到下一关中指向上一关的过渡区域，方便贴合边界
     const auto& transitions = nextLevel.getTransitions();
@@ -287,6 +296,14 @@ void Game::placePlayerInNextLevel() {
 
     player_->setPosition(target);
     player_->setSpeed(preTransitionSpeed_);
+}
+
+void Game::deadReset() {
+    deadWaitTimer_ -= deltaTime;
+    if (deadWaitTimer_ <= 0) {
+        delete player_;
+        player_ = new Player(levelManager_, [this](sf::Vector2f dir) { screenShake(dir); });
+    }
 }
 
 void Game::handleEvent(const sf::Event::Closed &) {

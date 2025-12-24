@@ -12,7 +12,7 @@ Player::Player(LevelManager& levelManager, std::function<void(sf::Vector2f)> sha
     // 设置角色参数
     player_.setFillColor(sf::Color::Red);
     player_.setOutlineColor(sf::Color::White);
-    player_.setOutlineThickness(5);
+    player_.setOutlineThickness(10);
     player_.setSize({80, 110});
     player_.setOrigin({40, 55});
     player_.setPosition(levelManager_->getLevel().getPosition());
@@ -27,6 +27,8 @@ Player::Player(LevelManager& levelManager, std::function<void(sf::Vector2f)> sha
     climbJumpProtectionTimer = 0;
     dashRefillCooldownTimer = 0;
     wallSlideDir = 0;
+    alive = true;
+    dashes = 1;
 
     // 设置回调
     shakeCallback = shake;
@@ -43,12 +45,6 @@ void Player::update() {
         moveX = forceMoveX;
     }
 
-    // 更新计时器
-    updateDashAttackTimer();
-
-    // 更新历史状态
-    wasOnGround = onGround;
-
     // 更新残影
     trailControl();
     trailEffectManager_.update();
@@ -56,6 +52,14 @@ void Player::update() {
     particleEmitter_.update();
     // 更新动画
     animationComponent_.update();
+
+    if (! alive) return ;
+
+    // 更新计时器
+    updateDashAttackTimer();
+
+    // 更新历史状态
+    wasOnGround = onGround;
 
     // 执行状态更新
     stateMachine_.update();
@@ -656,6 +660,11 @@ bool Player::moveVExact(int v) {
 }
 
 void Player::onCollideH(const CollisionData& data) {
+    if (! data.Hit.getSafe()) {
+        alive = false;
+        return ;
+    }
+
     int hitDirection = std::copysign(1.0, data.Direction.x);
 
     // 高速水平墙角修正
@@ -676,6 +685,11 @@ void Player::onCollideH(const CollisionData& data) {
 }
 
 void Player::onCollideV(const CollisionData& data) {
+    if (! data.Hit.getSafe()) {
+        alive = false;
+        return ;
+    }
+
     int hitDirection = std::copysign(1.0, data.Direction.y);
 
     // 向上墙角修正
@@ -820,7 +834,8 @@ void Player::render(sf::RenderWindow &window) {
     else
         player_.setFillColor(Used);
     trailEffectManager_.render(window);
-    window.draw(animationComponent_.applyTransform(player_));
+    if (alive)
+        window.draw(animationComponent_.applyTransform(player_));
     particleEmitter_.render(window);
 }
 
@@ -850,4 +865,16 @@ void Player::stopMovement() {
 
 void Player::resumeDash() {
     dashes = MaxDashes;
+}
+
+bool Player::isAlive() const {
+    return alive;
+}
+
+int Player::getDashes() const {
+    return dashes;
+}
+
+ParticleEmitter * Player::getParticleEmitter() {
+    return &particleEmitter_;
 }

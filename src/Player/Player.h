@@ -120,6 +120,7 @@ private:
     int forceMoveX; // 强制移动方向
     int lastClimbMove; // 上次攀爬移动方向
     float wallBoostDir; // 墙面助推方向
+    bool alive; // 是否活着
     sf::Vector2f speed; // 速度
     sf::Vector2f lastAim; // 最后瞄准方向
     sf::Vector2f beforeDashSpeed; // 冲刺前速度
@@ -157,6 +158,9 @@ public:
     void setSpeed(sf::Vector2f s);
     void stopMovement();
     void resumeDash();
+    bool isAlive() const;
+    int getDashes() const;
+    ParticleEmitter* getParticleEmitter();
 
 private:
     // 状态回调函数
